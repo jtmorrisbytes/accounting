@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use zeroize::Zeroize;
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,24 +15,13 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             let qr = qrcodegen::QrCode::encode_text(&passphrase, qrcodegen::QrCodeEcc::High)?;
             passphrase.zeroize();
 
-            let size = qr.size();
-            let border = 2; // "Quiet Zone" for the scanner
-
-            for y in (-border..size + border).step_by(2) {
-                for x in -border..size + border {
-                    // We check TWO vertical pixels at once to use half-block characters
-                    let top = qr.get_module(x, y);
-                    let bottom = qr.get_module(x, y + 1);
-
-                    match (top, bottom) {
-                        (true, true) => print!(" "),   // Both black (empty space)
-                        (true, false) => print!("▄"),  // Top black, bottom white
-                        (false, true) => print!("▀"),  // Top white, bottom black
-                        (false, false) => print!("█"), // Both white (full block)
-                    }
-                }
-                println!();
-            }
+            let buf = vault::graphics::render_qrcode_pix_bgr_u8(&qr, qr.size() as usize * 2);
+            vault::graphics::write_bitmap_bgr("./example.bmp", &buf, qr.size() * 2, qr.size() * 2)?;
+            let b: Vec<u8> = buf.iter().map(|b| format!("{b:08b}\n")).fold(Vec::new(),|mut acc: Vec<_>,value: String|{
+                acc.extend_from_slice(value.as_bytes());
+                acc
+            });
+            std::fs::File::create("./example.rawqrcode.binary.txt")?.write_all(&b)?;
 
             Ok(())
         }
