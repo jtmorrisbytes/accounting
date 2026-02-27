@@ -1,6 +1,13 @@
-[package]
-name = "accounting"
-version = "0.1.0"
-edition = "2024"
 
-[dependencies]
+[workspace]
+members = ["app","vault"]
+resolver="3"
+[workspace.dependencies]
+hot-lib-reloader = "0.8.2"
+reqwest = "0.13.2"
+rocket = "0.5.1"
+
+[workspace.dependencies.rocket_db_pools]
+version = "0.2.0"
+features = ["sqlx_sqlite"]
+

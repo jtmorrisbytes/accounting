@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Under Construction</title>
+    </head>
+    <body>
+        <h1>Under construction</h1>
+        <script type="text/javascript" src="/public/js/htmx.min.js" integrity="sha256-upUwYnay6R+DA68rROTAP+EdfO3NvOqtE513PgDyAYM=" crossorigin="anonymous" ></script>
+    </body>
+</html>

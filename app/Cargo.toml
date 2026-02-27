@@ -1,0 +1,24 @@
+[package]
+name="accounting"
+version="0.1.0"
+edition="2024"
+
+
+[lib]
+path="src/lib/mod.rs"
+
+
+[dependencies]
+reqwest.workspace=true
+rocket = {workspace=true, features=["secrets","tls"]}
+hot-lib-reloader.workspace = true
+rocket_dyn_templates = { version = "0.2.0", features = ["tera"] }
+
+[dependencies.rocket_db_pools]
+version = "0.2.0"
+features = ["sqlx_sqlite"]
+
+webauthn-rs = "0.5.4"
+
+[build-dependencies]
+sha2 = "0.10.9"

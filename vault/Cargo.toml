@@ -1,0 +1,28 @@
+[package]
+name="vault"
+version="0.1.0"
+edition="2024"
+
+[lib]
+path="src/lib/mod.rs"
+
+[dependencies]
+aes-gcm = "0.10.3"
+argon2 = "0.5.3"
+qrcodegen = "1.8.0"
+secrecy = "0.10.3"
+zeroize = "1.8.2"
+
+[dependencies.windows]
+version = "0.61.2"
+features=[
+    "Win32_Security_Tpm",
+    "Win32_Foundation",
+    "Win32_System_TpmBaseServices", 
+    "Win32_Security_Cryptography",
+    "Win32_System_Memory",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Printing",
+    "Win32_UI_WindowsAndMessaging"
+]
+
