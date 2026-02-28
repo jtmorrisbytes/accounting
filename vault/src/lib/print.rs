@@ -3,11 +3,13 @@ use qrcodegen::QrCode;
 #[cfg(windows)]
 use windows::Win32::{
     Foundation::{COLORREF, SIZE},
-    Graphics::Gdi::{
-        BLACKNESS, CLIP_DEFAULT_PRECIS, CreateSolidBrush, DEFAULT_CHARSET, DEFAULT_QUALITY,
-        DeleteObject, FONT_CLIP_PRECISION, FONT_OUTPUT_PRECISION, FONT_QUALITY, FW_BOLD,
-        GetDeviceCaps, GetTextExtentPoint32W, HDC, LOGPIXELSX, LOGPIXELSY, OUT_DEFAULT_PRECIS,
-        PatBlt, SelectObject, TextOutW,
+    Graphics::{
+        Gdi::{
+            BLACKNESS, CLIP_DEFAULT_PRECIS, CreateSolidBrush, DEFAULT_CHARSET, DEFAULT_QUALITY,
+            DeleteObject, FW_BOLD, GetDeviceCaps, GetTextExtentPoint32W, HDC, LOGPIXELSX,
+            LOGPIXELSY, OUT_DEFAULT_PRECIS, PatBlt, SelectObject, TextOutW,
+        },
+        Printing::{GetJobW, OpenPrinterW, PRINTER_HANDLE},
     },
     Storage::Xps::{EndDoc, EndPage},
 };
@@ -15,6 +17,8 @@ use windows::{
     Win32::Graphics::Gdi::{CreateFontW, FW_NORMAL, HFONT},
     core::PCWSTR,
 };
+#[cfg(windows)]
+use zeroize::Zeroize;
 
 use crate::tpm_2_0::win32;
 
@@ -59,43 +63,23 @@ pub fn win32_close_printer(
     unsafe { ClosePrinter(printer_handle) }
 }
 #[cfg(windows)]
-fn wait_for_job(h_printer: windows::Win32::Graphics::Printing::PRINTER_HANDLE, job_id: u32) {
+fn get_job_status(h_printer: windows::Win32::Graphics::Printing::PRINTER_HANDLE, job_id: u32) -> i32 {
     use windows::Win32::Graphics::Printing::{
         GetJobW, JOB_INFO_1W, JOB_STATUS_ERROR, JOB_STATUS_PRINTED,
     };
-    loop {
-        let mut bytes_needed: u32 = 0;
+    let mut bytes_needed: u32 = 0;
 
-        // 1. Get required buffer size
-        unsafe {
-            let _ = GetJobW(h_printer, job_id, 1, None, &mut bytes_needed).ok();
-        }
-
-        if bytes_needed > 0 {
-            let mut buffer = vec![0u8; bytes_needed as usize];
-            // let mut bytes_written: u32 = 0;
-
-            // 2. Fetch actual job info (Level 1)
-            let success =
-                unsafe { GetJobW(h_printer, job_id, 1, Some(&mut buffer), &mut bytes_needed).0 };
-
-            if success != 0 {
-                let job_info = unsafe { &*(buffer.as_ptr() as *const JOB_INFO_1W) };
-                let status = job_info.Status;
-
-                if status & JOB_STATUS_PRINTED != 0 {
-                    println!("Print successful!");
-                    break;
-                } else if status & JOB_STATUS_ERROR != 0 {
-                    eprintln!("Printer reported an error.");
-                    break;
-                }
-            }
-        }
-
-        // Don't hammer the CPU; wait between polls
-        std::thread::sleep(std::time::Duration::from_millis(500));
+    // 1. Get required buffer size
+    unsafe {
+        let _ = GetJobW(h_printer, job_id, 1, None, &mut bytes_needed).ok();
     }
+
+    let mut buffer = vec![0u8; bytes_needed as usize];
+    // let mut bytes_written: u32 = 0;
+
+    // 2. Fetch actual job info (Level 1)
+    let status = unsafe { GetJobW(h_printer, job_id, 1, Some(&mut buffer), &mut bytes_needed).0 };
+    status
 }
 
 fn create_printer_font(h_dc: HDC, point_size: i32, face_name: &str) -> HFONT {
@@ -135,15 +119,11 @@ fn create_printer_font(h_dc: HDC, point_size: i32, face_name: &str) -> HFONT {
 #[cfg(windows)]
 pub fn win32_print_bip39_using_gdi(
     qr: &QrCode,
-    bips: Vec<String>,
+    mut bips:  Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use windows::Win32::Graphics::Gdi::{CreateDCW, CreateFontW, DeleteDC};
-    use windows::Win32::Graphics::Printing::{
-        DOC_INFO_1W, EndDocPrinter, EndPagePrinter, StartDocPrinterW, StartPagePrinter,
-        WritePrinter,
-    };
+    use windows::Win32::Graphics::Gdi::{CreateDCW, DeleteDC};
+
     use windows::Win32::Storage::Xps::{DOCINFOW, StartDocW, StartPage};
-    use windows::core::{HRESULT, HSTRING, PWSTR};
     let default_printer = win32_get_default_printer()?;
     let default_printer = default_printer
         .encode_utf16()
@@ -160,7 +140,7 @@ pub fn win32_print_bip39_using_gdi(
     // setting up printing context
     // dots per inch
     let dpi_x = unsafe { GetDeviceCaps(Some(hdc), LOGPIXELSX) };
-    let dpi_y = unsafe { GetDeviceCaps(Some(hdc), LOGPIXELSY) };
+    // let dpi_y = unsafe { GetDeviceCaps(Some(hdc), LOGPIXELSY) };
 
     let mut doc_info = DOCINFOW::default();
     // let mut name = "SECURE DOCUMENT".encode_utf16().chain(Some(0)).collect::<Vec<_>>();
@@ -201,7 +181,6 @@ pub fn win32_print_bip39_using_gdi(
     let total_qr_pixels = (qr_target_size_inches as f64 * dpi_x as f64) as i32;
 
     let module_size = total_qr_pixels / qr.size();
-    let qr_actual_size = module_size * qr.size();
     let offset_x = (0.5 * dpi_x as f64) as i32;
     let offset_y = (0.5 * dpi_x as f64) as i32;
 
@@ -230,14 +209,14 @@ pub fn win32_print_bip39_using_gdi(
     let header = windows::core::w!("Your Bips 39 passcode is");
     let mut text_extent = SIZE::default();
     let _ = unsafe { GetTextExtentPoint32W(hdc, header.as_wide(), &mut text_extent).ok() };
-    
+
     // panic!("extent cy {}", text_extent.cy);
-    
+
     unsafe {
         let _ = TextOutW(hdc, 100, top_offset_y, header.as_wide());
     }
     top_offset_y += text_extent.cy + 100;
-    
+
     // determine the minimum size of a column. needs to be at least as long as the text
     let mut col_size_x = 0;
     let mut col_size_y = 0;
@@ -284,11 +263,14 @@ pub fn win32_print_bip39_using_gdi(
 
     let _ = unsafe { EndPage(hdc) };
     let _ = unsafe { EndDoc(hdc) };
+    // let _ = unsafe { SetJo}
     let _ = unsafe { DeleteObject(h_font.into()) };
 
     let _ = unsafe { DeleteDC(hdc) };
+    // let mut printer_handle = PRINTER_HANDLE::default();
     // wait_for_job(printer_handle, print_job_id);
     // win32_close_printer(printer_handle)?;
+    bips.zeroize();
     Ok(())
 }
 
@@ -298,7 +280,8 @@ pub mod tests {
 
     use crate::print::win32_print_bip39_using_gdi;
 
-    #[test]
+    // #[test]
+    // only enable this test if you have a printer
     pub fn test_print_data_from_memory() -> Result<(), Box<dyn std::error::Error>> {
         let bips = crate::bips::bips_39()?;
         let mut passphrase = bips.join(" ");
