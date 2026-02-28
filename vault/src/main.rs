@@ -11,18 +11,9 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!(
                 "This program will generate some entropy in the form of a bips 39 passphrase, then prompt you to print it"
             );
-            let mut passphrase = vault::bips::bips_39()?.join(" ");
-            let qr = qrcodegen::QrCode::encode_text(&passphrase, qrcodegen::QrCodeEcc::High)?;
-            passphrase.zeroize();
-
-            let buf = vault::graphics::render_qrcode_pix_bgr_u8(&qr, qr.size() as usize * 2);
-            vault::graphics::write_bitmap_bgr("./example.bmp", &buf, qr.size() * 2, qr.size() * 2)?;
-            let b: Vec<u8> = buf.iter().map(|b| format!("{b:08b}\n")).fold(Vec::new(),|mut acc: Vec<_>,value: String|{
-                acc.extend_from_slice(value.as_bytes());
-                acc
-            });
-            std::fs::File::create("./example.rawqrcode.binary.txt")?.write_all(&b)?;
-
+            let mut passphrases = vault::bips::bips_39()?;
+            let html = vault::graphics::render_bips39_phrases_to_html(passphrases)?;
+            std::fs::File::create("bips39.html")?.write_all(html.as_bytes())?;
             Ok(())
         }
         _ => Err("".into()),
