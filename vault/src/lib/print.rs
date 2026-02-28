@@ -1,11 +1,11 @@
-#[cfg(windows)]
+// #[cfg(windows)]
 use qrcodegen::QrCode;
+use windows::{Win32::Graphics::Gdi::{CreateFontW, FW_NORMAL, HFONT}, core::PCWSTR};
 #[cfg(windows)]
 use windows::Win32::{
-    Graphics::Gdi::{
-        CLIP_DEFAULT_PRECIS, DEFAULT_CHARSET, DEFAULT_QUALITY, DeleteObject, FONT_CLIP_PRECISION, FONT_OUTPUT_PRECISION, FONT_QUALITY, FW_BOLD, OUT_DEFAULT_PRECIS, SelectObject, TextOutW
-    },
-    Storage::Xps::{EndDoc, EndPage},
+    Foundation::{COLORREF, SIZE}, Graphics::Gdi::{
+        BLACKNESS, CLIP_DEFAULT_PRECIS, CreateSolidBrush, DEFAULT_CHARSET, DEFAULT_QUALITY, DeleteObject, FONT_CLIP_PRECISION, FONT_OUTPUT_PRECISION, FONT_QUALITY, FW_BOLD, GetDeviceCaps, GetTextExtentPoint32W, HDC, LOGPIXELSX, LOGPIXELSY, OUT_DEFAULT_PRECIS, PatBlt, SelectObject, TextOutW
+    }, Storage::Xps::{EndDoc, EndPage}
 };
 
 use crate::tpm_2_0::win32;
@@ -90,6 +90,39 @@ fn wait_for_job(h_printer: windows::Win32::Graphics::Printing::PRINTER_HANDLE, j
     }
 }
 
+
+fn create_printer_font(h_dc: HDC, point_size: i32, face_name: &str) -> HFONT {
+    // 1. Get the actual vertical DPI of the printer
+    let dpi_y = unsafe {GetDeviceCaps(h_dc.into(), LOGPIXELSY)};
+
+    // 2. Calculate height: (Points * DPI) / 72
+    // We use a negative value to get the exact point size height
+    let height = -((point_size * dpi_y) / 72);
+
+    let face_name = face_name.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
+    let p_face_name = PCWSTR(face_name.as_ptr());
+    // 3. Create the font
+    unsafe {
+
+         CreateFontW(
+            height,
+            0,
+            0,
+            0,
+            FW_BOLD.0 as i32,
+            0,
+            0,
+            0,
+            DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS,
+            CLIP_DEFAULT_PRECIS,
+            DEFAULT_QUALITY,
+            0,
+            p_face_name,
+        )
+    }
+}
+
 // WHY MICROSOFT?? WHY MUST PRINTING BE SO DAMN HARD. Printing requires programming languages sent to printer.
 // wont do this. maybe xps works instead?
 /// uses GDI to print in XPS document format. requires an XPS compatable printer
@@ -112,11 +145,23 @@ pub fn win32_print_bip39_using_gdi(
         .collect::<Vec<u16>>();
     let p_default_printer = windows::core::PCWSTR::from_raw(default_printer.as_ptr());
 
+
+    
+
+
+
+
+
     // open a gdi device context instead
     let hdc = unsafe { CreateDCW(None, p_default_printer, None, None) };
     if hdc.is_invalid() {
         return Err(windows::core::Error::from_win32().into());
     }
+
+    // setting up printing context
+    // dots per inch
+    let dpi_x = unsafe { GetDeviceCaps(Some(hdc), LOGPIXELSX) }; 
+    let dpi_y = unsafe { GetDeviceCaps(Some(hdc), LOGPIXELSY) };
 
     let mut doc_info = DOCINFOW::default();
     // let mut name = "SECURE DOCUMENT".encode_utf16().chain(Some(0)).collect::<Vec<_>>();
@@ -141,24 +186,7 @@ pub fn win32_print_bip39_using_gdi(
         )
         .into());
     }
-    let h_font = unsafe {
-        CreateFontW(
-            60,
-            0,
-            0,
-            0,
-            FW_BOLD.0 as i32,
-            0,
-            0,
-            0,
-            DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS,
-            CLIP_DEFAULT_PRECIS,
-            DEFAULT_QUALITY,
-            0,
-            windows::core::w!("Arial"),
-        )
-    };
+    let h_font = create_printer_font(hdc, 12, "Arial");
     if h_font.is_invalid() {
         unsafe {
             let _ = EndPage(hdc);
@@ -166,14 +194,80 @@ pub fn win32_print_bip39_using_gdi(
         }
         return Err(windows::core::Error::from_win32().into());
     }
+
+
+    // render the qr code
+    let black_brush = unsafe {CreateSolidBrush(COLORREF(0))};
+    let _old_brush = unsafe {SelectObject(hdc, black_brush.into())};
+    let qr_target_size_inches = 3;
+    let total_qr_pixels = (qr_target_size_inches as f64 * dpi_x as f64) as i32;
+
+    let module_size = total_qr_pixels / qr.size();
+    let qr_actual_size = module_size * qr.size();
+    let offset_x = (0.5 * dpi_x as f64) as i32;
+    let offset_y = (0.5 * dpi_x as f64) as i32;
+
+    for y in 0..qr.size() {
+        for x in 0..qr.size() {
+            if qr.get_module(x, y) {
+                let left = offset_x + (x * module_size);
+                let top = offset_y + (y as i32 * module_size);
+                unsafe {
+                    let _ = PatBlt(hdc, left, top, module_size, module_size, BLACKNESS).ok();
+                }
+            }
+        }
+    }
+    let _ = unsafe {SelectObject(hdc, _old_brush)};
+
+    let mut top_offset_y = total_qr_pixels + 10;
+    // calculate the space that the qr code took up
+
+
+
     // make this font active
     unsafe {
         SelectObject(hdc, h_font.into());
     }
 
     // write some text
+    let header = windows::core::w!("Your Bips 39 passcode is");
+    let mut text_extent = SIZE::default();
+    let _ =  unsafe {
+        GetTextExtentPoint32W(hdc, header.as_wide(), &mut text_extent).ok()
+    };
+
+    top_offset_y += text_extent.cy + 10;
+
     unsafe {
-        let _ = TextOutW(hdc, 100, 100, windows::core::w!("hello world").as_wide());
+        let _ = TextOutW(hdc, 100, top_offset_y, header.as_wide());
+    }
+
+    // determine the minimum size of a column. needs to be at least as long as the text
+    let mut col_size_x = 0;
+    let mut col_size_y = 0;
+    for phrase in bips.iter() {
+        let wide: Vec<u16> = phrase.encode_utf16().chain(Some(0)).collect();
+        let mut extent = SIZE::default();
+         unsafe {
+            let _ = GetTextExtentPoint32W(hdc, &wide, &mut extent).ok();
+        }
+        col_size_y = extent.cy.max(col_size_y);
+        col_size_x = extent.cx.max(col_size_x);
+         
+    }
+
+    let cols = 3;
+    for (i,phrase) in bips.iter().enumerate() {
+        let wide: Vec<u16> = phrase.encode_utf16().chain(Some(0)).collect();
+        let mut text_extent = SIZE::default();
+        unsafe {GetTextExtentPoint32W(hdc,&wide, &mut text_extent).ok()?};
+        // let pcwstr = PCWSTR(wide.as_ptr());
+        let col = i % cols;
+        let row = i / cols;
+         unsafe {
+        let _ = TextOutW(hdc, col_size_x * col as i32 , col_size_y * row as i32, &wide);
+    }   
     }
     
     let _  = unsafe {
