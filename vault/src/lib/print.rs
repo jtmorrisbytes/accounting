@@ -63,7 +63,10 @@ pub fn win32_close_printer(
     unsafe { ClosePrinter(printer_handle) }
 }
 #[cfg(windows)]
-fn get_job_status(h_printer: windows::Win32::Graphics::Printing::PRINTER_HANDLE, job_id: u32) -> i32 {
+fn get_job_status(
+    h_printer: windows::Win32::Graphics::Printing::PRINTER_HANDLE,
+    job_id: u32,
+) -> i32 {
     use windows::Win32::Graphics::Printing::{
         GetJobW, JOB_INFO_1W, JOB_STATUS_ERROR, JOB_STATUS_PRINTED,
     };
@@ -119,7 +122,7 @@ fn create_printer_font(h_dc: HDC, point_size: i32, face_name: &str) -> HFONT {
 #[cfg(windows)]
 pub fn win32_print_bip39_using_gdi(
     qr: &QrCode,
-    mut bips:  Vec<String>,
+    mut bips: Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use windows::Win32::Graphics::Gdi::{CreateDCW, DeleteDC};
 
