@@ -127,7 +127,7 @@ pub fn render_qr_to_svg(qr: &qrcodegen::QrCode) -> String {
     format!(r#"<path fill="black" d="{path}"/>"#)
 }
 
-pub fn render_bips39_phrases_to_html(phrases: Vec<String>) -> Result<String,Box<dyn std::error::Error>> {
+pub fn render_bips39_phrases_to_html(mut phrases: Vec<String>) -> Result<String,Box<dyn std::error::Error>> {
     // combine the phrase
     let passphrase = phrases.join(" ");
     let qr = qrcodegen::QrCode::encode_text(&passphrase, qrcodegen::QrCodeEcc::High)?;
@@ -165,6 +165,7 @@ pub fn render_bips39_phrases_to_html(phrases: Vec<String>) -> Result<String,Box<
         text_group_contents.push_str("\n");
 
     }
+    phrases.zeroize();
     top_offset = top_offset + row_height * (phrases.len() / 4 ) + 5;
 
     let message = format!("<text y=\"{top_offset}\" font-size=\"6\" font-family=\"monospace\">Print this file for your records.</text>");

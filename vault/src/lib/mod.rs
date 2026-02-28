@@ -3,3 +3,4 @@
 pub mod tpm_2_0;
 pub mod bips;
 pub mod graphics;
+pub mod print;
