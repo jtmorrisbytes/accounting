@@ -1,0 +1,9 @@
+{
+    "zig.buildOnSaveProvider": "zls",
+    "zig.zls.additionalOptions": {
+        "zig.zls.buildOnSave":true,
+        "zig.zls.includePaths": [
+            "${workspaceFolder}/vendor/sqlite-c-3150300/"
+        ],
+    }
+}

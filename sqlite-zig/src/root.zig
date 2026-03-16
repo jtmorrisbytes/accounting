@@ -1,23 +1,43 @@
 //! By convention, root.zig is the root source file when making a library.
-const std = @import("std");
-const sqlite = @cImport("sqlite.c");
-pub fn bufferedPrint() !void {
-    // Stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-    const stdout = &stdout_writer.interface;
+// const std = @import("std");
+const sqlite = @cImport({
+    @cInclude("sqlite3.h");
+});
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+pub const sqlite_zig_alloc = @import("alloc/alloc.zig");
 
-    try stdout.flush(); // Don't forget to flush!
+const SQLiteZigInitResult = enum(c_int) {
+    Ok = 0,
+    Error = 1,
+    UnknownError = -1, // Catch-all for unexpected return values
+    // Add more specific error codes as needed
+};
+
+// initializes the sqlite library. This should be called before using any other SQLite functions. It sets up internal data structures and prepares the library for use.
+export fn sqlite_zig_v0_init() SQLiteZigInitResult {
+    const retval = sqlite.sqlite3_initialize();
+    const r = switch (retval) {
+        sqlite.SQLITE_OK => SQLiteZigInitResult.Ok,
+        sqlite.SQLITE_ERROR => SQLiteZigInitResult.Error,
+        else => SQLiteZigInitResult.UnknownError,
+    };
+    return r;
 }
 
-pub fn add(a: i32, b: i32) i32 {
-    return a + b;
-}
+const SQliteZigShutdownResult = enum(i32) {
+    Ok = 0,
+    Error = 1,
+    UnknownError = -1, // Catch-all for unexpected return values
+    // Add more specific error codes as needed
+};
 
-test "basic add functionality" {
-    try std.testing.expect(add(3, 7) == 10);
+/// de-initializes the SQLite library. This should be called when your application is done using SQLite, typically just before exiting.
+export fn sqlite_zig_v0_shutdown() SQliteZigShutdownResult {
+    const retval = sqlite.sqlite3_shutdown();
+    const r = switch (retval) {
+        sqlite.SQLITE_OK => SQliteZigShutdownResult.Ok,
+        sqlite.SQLITE_ERROR => SQliteZigShutdownResult.Error,
+        else => SQliteZigShutdownResult.UnknownError,
+    };
+    return r;
 }

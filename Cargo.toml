@@ -1,7 +1,7 @@
 
 
 [workspace]
-members = ["app","sqlite_zig","jtmb-reflect-db","sql","sql/accounting_proc_macro","sql/migrations","vault","vault_ui","vault_service",
+members = ["app","sqlite-zig","jtmb-reflect-db","sql","sql/accounting_proc_macro","sql/migrations","vault","vault_ui","vault_service",
 "vault_ci","chrome_devtools_protocol",
 "chrome_devtools_protocol_parser_and_builder"
 ]

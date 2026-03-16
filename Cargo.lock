@@ -5281,6 +5281,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "sqlite_zig"
+version = "0.1.0"
+
+[[package]]
 name = "sqlx"
 version = "0.8.6"
 dependencies = [

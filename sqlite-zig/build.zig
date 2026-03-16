@@ -68,7 +68,9 @@ pub fn build(b: *std.Build) !void {
             "-march=native", // Heavy lifting for your 5600X
             "-O3",
             "-DSQLITE_THREADSAFE=0",
-            "-DSQLITE_TEMP_STORE=3", // Use your 48GB RAM for temp tables
+            "-DSQLITE_TEMP_STORE=3",
+            "-DSQLITE_OMIT_AUTOINIT=1",
+            // Use your 48GB RAM for temp tables
         },
     });
     lib.addIncludePath(base_dir);
