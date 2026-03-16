@@ -45,3 +45,6 @@ export fn sqlite_zig_shutdown() SQliteZigShutdownResult {
     };
     return r;
 }
+
+// chkstk no ops... not reccomended for global but gets it to compile
+// export fn ___chkstk_ms() void {}

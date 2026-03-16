@@ -50,15 +50,17 @@ pub fn build(b: *std.Build) !void {
     // const generated_h = assemble_step.addOutputFileArg("sqlite3.h");
 
     // do not enable runtime safety features ... yes you heard me right :)
-    const sql_mod = b.addModule("sqlite_zig", .{ .root_source_file = b.path("src/root.zig"), .target = target, .optimize = optimize, .link_libc = true, .sanitize_c = .off, .stack_check = false, .stack_protector = false });
-    sql_mod.stack_check = false;
-    sql_mod.stack_protector = false;
+    const sql_mod = b.addModule("sqlite_zig", .{ .root_source_file = b.path("src/root.zig"), .target = target, .optimize = optimize, .link_libc = true, .sanitize_c = .off, .stack_check = true, .stack_protector = true });
+    sql_mod.stack_check = true;
+    sql_mod.stack_protector = true;
     sql_mod.sanitize_c = .off;
     const lib = b.addLibrary(.{
         .name = "sqlite_zig",
         .linkage = .static,
         .root_module = sql_mod,
     });
+    lib.bundle_ubsan_rt = true;
+    lib.bundle_compiler_rt = true;
 
     lib.addCSourceFile(.{
         .file = base_dir.path(b, "sqlite3.c"),

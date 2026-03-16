@@ -4,6 +4,7 @@
 
 use std::alloc::{alloc, dealloc, realloc, Layout};
 use std::ptr;
+use std::sync::atomic::{AtomicPtr, Ordering};
 
 #[repr(C, align(8))]
 struct Header {
@@ -80,4 +81,24 @@ pub extern "C" fn __rust_sqlite_zig_alloc_init(p: *mut core::ffi::c_void) -> i32
 pub extern "C" fn __rust_sqlite_zig_alloc_shutdown(p: *mut core::ffi::c_void) {
     // do nothing
 
+}
+
+
+// Global pointer so Zig can "find" it if needed, or just pass it once.
+static PAGE_CACHE_PTR: AtomicPtr<u8> = AtomicPtr::new(std::ptr::null_mut());
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn __rust_sqlite_zig_alloc_get_page_cache_buffer(out_size: *mut usize) -> *mut u8 {
+    unsafe {
+
+        let size = 64 * 1024 * 1024; // 64MB Page Cache
+        let layout = Layout::from_size_align_unchecked(size, 8);
+        
+        let ptr = alloc(layout);
+        if !ptr.is_null() {
+            *out_size = size;
+            PAGE_CACHE_PTR.store(ptr, Ordering::SeqCst);
+        }
+        ptr
+    }
 }

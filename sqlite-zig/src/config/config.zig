@@ -50,7 +50,23 @@ export fn sqlite_zig_configure_scratch(buffer: [*]u8, size: i32, min_alloc: i32)
     _ = min_alloc;
 }
 
-export fn sqlite_zig_configure_pagecache() void {}
+export fn sqlite_zig_configure_pagecache(size: usize) i32 {
+    // var size: usize = 0;
+    const ptr = alloc.__rust_sqlite_zig_alloc_get_page_cache_buffer(size) orelse return -1;
+
+    // Verb: SQLITE_CONFIG_PAGECACHE
+    // Args: void* pBuf, int sz, int n
+    // We assume 4KB pages (4096 bytes)
+    const page_size: i32 = 4096;
+
+    // Each 'slot' in the cache needs (page_size + overhead)
+    const slot_size: usize = @intCast(page_size + 32);
+
+    // This MUST be greater than zero for the config to take effect
+    const num_pages: i32 = @intCast(size / slot_size);
+
+    return sqlite.sqlite3_config(sqlite.SQLITE_CONFIG_PAGECACHE, ptr, page_size, num_pages);
+}
 
 // export fn sqlite_zig_configure_heap() void {}
 
@@ -66,8 +82,13 @@ export fn sqlite_zig_configure_log() void {}
 
 export fn sqlite_zig_configure_lookaside() void {}
 
-/// accepts configuration options via bitwise parameters.
-export fn sqlite_zig_configure(parameters: u32) u32 {
-    _ = parameters;
-    return 0;
+// /// accepts configuration options via bitwise parameters.
+// export fn sqlite_zig_configure(parameters: u32) u32 {
+//     _ = parameters;
+//     return 0;
+// }
+
+// asks sqlite if it was compiled with threadsafe
+export fn sqlite_zig_comptime_threadsafe() i32 {
+    return sqlite.sqlite3_threadsafe();
 }

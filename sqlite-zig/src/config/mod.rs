@@ -26,7 +26,7 @@ unsafe extern "C"  {
     
     pub(crate) fn sqlite_zig_configure_scratch(buffer: *mut *mut u8, size: i32, min_alloc: i32);
     
-    pub(crate) fn sqlite_zig_configure_pagecache();
+    pub(crate) fn sqlite_zig_configure_pagecache(size:usize) -> i32;
     
     // pub(crate) fn sqlite_zig_v0_configure_heap();
     
@@ -39,10 +39,23 @@ unsafe extern "C"  {
     pub(crate) fn sqlite_zig_configure_log();
     
     pub(crate) fn sqlite_zig_configure_lookaside();
+    /// asks if sqlite was compiled SQLITE_THREADSAFE
+    pub(crate) unsafe fn sqlite_zig_comptime_threadsafe() -> i32;
+
     
     // accepts configuration options via bitwise parameters.
     // pub(crate) fn sqlite_zig_configure(parameters: u32) -> u32;
 }
+
+fn _sqlite_zig_comptime_threadsafe() -> Result<i32,crate::Error> {
+    unsafe {
+        match sqlite_zig_comptime_threadsafe() {
+            val @ 0..=2 => Ok(val),
+            other=> Err(std::io::Error::new(std::io::ErrorKind::InvalidData, format!("sqlite_zig_comptime_threadsafe returned unknown val {other}")).into())
+        }
+    }
+}
+
 
 fn _sqlite_zig_configure_singlethreaded() -> Result<(),crate::Error> {
       let r = unsafe {
@@ -70,11 +83,23 @@ fn _sqlite_zig_configure_memstatus(boolean:bool) -> Result<(),crate::Error> {
         Ok(())
 }
 
+fn _sqlite_zig_configure_pagecache(size:usize) -> Result<(),crate::Error> {
+    unsafe {
+        let _r  = sqlite_zig_configure_pagecache(size);
+        Ok(())
+    }
+}
+
 pub fn sqlite_zig_configure(parameters: u32) -> Result<(),crate::Error> {
     
     // defualt "singlethreaded. we turn off all safeguards and ensure we program correctly "
-    _sqlite_zig_configure_singlethreaded()?;
+    let threading = _sqlite_zig_comptime_threadsafe()?;
+    // we purposely turn off mutexes, stack canaries, and the like. our code needs to work without them
+    if threading > 0 {
+        _sqlite_zig_configure_singlethreaded()?;
+    }
     _sqlite_zig_configure_malloc()?;
     _sqlite_zig_configure_memstatus(false)?;
+    _sqlite_zig_configure_pagecache(64 * 1024 * 1024)?;
     Ok(())
 }

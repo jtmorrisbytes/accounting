@@ -15,6 +15,8 @@ extern fn __rust_sqlite_zig_alloc_size(p: ?*anyopaque) callconv(.c) i32;
 extern fn __rust_sqlite_zig_alloc_roundup(n: i32) callconv(.c) i32;
 extern fn __rust_sqlite_zig_alloc_init(p: ?*anyopaque) callconv(.c) i32;
 extern fn __rust_sqlite_zig_alloc_shutdown(p: ?*anyopaque) callconv(.c) void;
+// callback fn from rust to set up the rust -> zig <- C page catch handshake
+pub extern fn __rust_sqlite_zig_alloc_get_page_cache_buffer(out_size: usize) callconv(.c) ?*anyopaque;
 
 pub fn get_mem_methods() sqlite.sqlite3_mem_methods {
     return .{
