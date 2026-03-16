@@ -8,10 +8,10 @@ pub mod config;
 pub type Error = Box<dyn std::error::Error>;
 
 
-pub fn sqlite_zig_init(parameters: u32) -> Result<(),self::Error> {
+pub fn jtmb_sqlite_init(parameters: u32) -> Result<(),self::Error> {
     unsafe {
-        config::sqlite_zig_configure(parameters)?;
-        let r = ffi::sqlite_zig_init();
+        config::jtmb_sqlite_configure(parameters)?;
+        let r = ffi::jtmb_sqlite_init();
         match r {
             // ffi::SQliteZigInitResult::Ok => Ok(()),
             ffi::SQliteZigInitResult::Error => {
@@ -26,9 +26,9 @@ pub fn sqlite_zig_init(parameters: u32) -> Result<(),self::Error> {
 
 
 
-pub fn sqlite_zig_shutdown() -> Result<(),self::Error> {
+pub fn jtmb_sqlite_shutdown() -> Result<(),self::Error> {
     unsafe {
-        let r = ffi::sqlite_zig_shutdown();
+        let r = ffi::jtmb_sqlite_shutdown();
         match r {
             ffi::SQliteZigShutdownResult::Ok => Ok(()),
             ffi::SQliteZigShutdownResult::Error => Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other,"Shutdown error"))),
@@ -39,7 +39,7 @@ pub fn sqlite_zig_shutdown() -> Result<(),self::Error> {
 
 #[test]
 pub fn test_init() -> Result<(),self::Error> {
-    sqlite_zig_init(1)?;
-    sqlite_zig_shutdown()?;
+    jtmb_sqlite_init(1)?;
+    jtmb_sqlite_shutdown()?;
     Ok(())
 }

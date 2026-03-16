@@ -17,8 +17,8 @@ pub enum SQliteZigShutdownResult {
     UnknownError = -1,
 }
 
-#[link(name = "sqlite_zig", kind = "static")]
+#[link(name = "jtmb_sqlite", kind = "static")]
 unsafe extern "C" {
-    pub unsafe fn sqlite_zig_init() -> SQliteZigInitResult;
-    pub unsafe fn sqlite_zig_shutdown() -> SQliteZigShutdownResult;
+    pub unsafe fn jtmb_sqlite_init() -> SQliteZigInitResult;
+    pub unsafe fn jtmb_sqlite_shutdown() -> SQliteZigShutdownResult;
 }

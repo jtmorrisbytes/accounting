@@ -14,7 +14,7 @@ const H_SIZE: usize = std::mem::size_of::<Header>(); // Likely 8 or 16
 
 
 #[unsafe(no_mangle)]
-pub extern "C" fn __rust_sqlite_zig_alloc_malloc(n:i32) -> *mut core::ffi::c_void {
+pub extern "C" fn __rust_jtmb_sqlite_alloc_malloc(n:i32) -> *mut core::ffi::c_void {
     if n <= 0 { return ptr::null_mut(); }
     let n = n as usize;
     let total = n + H_SIZE;
@@ -30,7 +30,7 @@ pub extern "C" fn __rust_sqlite_zig_alloc_malloc(n:i32) -> *mut core::ffi::c_voi
     }
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn __rust_sqlite_zig_alloc_free(p: *mut core::ffi::c_void) {
+pub extern "C" fn __rust_jtmb_sqlite_alloc_free(p: *mut core::ffi::c_void) {
     if p.is_null() { return; }
     unsafe {
     let raw = p.sub(H_SIZE);
@@ -40,10 +40,10 @@ pub extern "C" fn __rust_sqlite_zig_alloc_free(p: *mut core::ffi::c_void) {
 }
 #[unsafe(no_mangle)]
 
-pub extern "C" fn __rust_sqlite_zig_alloc_realloc(p: *mut core::ffi::c_void, n: i32) -> *mut core::ffi::c_void {
+pub extern "C" fn __rust_jtmb_sqlite_alloc_realloc(p: *mut core::ffi::c_void, n: i32) -> *mut core::ffi::c_void {
     unsafe {
-            if p.is_null() { return __rust_sqlite_zig_alloc_malloc(n); }
-    if n <= 0 { __rust_sqlite_zig_alloc_free(p); return ptr::null_mut(); }
+            if p.is_null() { return __rust_jtmb_sqlite_alloc_malloc(n); }
+    if n <= 0 { __rust_jtmb_sqlite_alloc_free(p); return ptr::null_mut(); }
 
     let old_raw = p.sub(H_SIZE);
     let old_size = (*(old_raw as *const Header)).size;
@@ -58,7 +58,7 @@ pub extern "C" fn __rust_sqlite_zig_alloc_realloc(p: *mut core::ffi::c_void, n: 
 
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn __rust_sqlite_zig_alloc_size(p: *mut core::ffi::c_void) -> i32 {
+pub extern "C" fn __rust_jtmb_sqlite_alloc_size(p: *mut core::ffi::c_void) -> i32 {
     unsafe  {
             if p.is_null() { return 0; }
     let raw = p.sub(H_SIZE);
@@ -68,17 +68,17 @@ pub extern "C" fn __rust_sqlite_zig_alloc_size(p: *mut core::ffi::c_void) -> i32
 
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn __rust_sqlite_zig_alloc_roundup(n: i32) -> i32 {
+pub extern "C" fn __rust_jtmb_sqlite_alloc_roundup(n: i32) -> i32 {
     (n + 7) & !7
 
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn __rust_sqlite_zig_alloc_init(p: *mut core::ffi::c_void) -> i32 {
+pub extern "C" fn __rust_jtmb_sqlite_alloc_init(p: *mut core::ffi::c_void) -> i32 {
     0
 
 }
 #[unsafe(no_mangle)]
-pub extern "C" fn __rust_sqlite_zig_alloc_shutdown(p: *mut core::ffi::c_void) {
+pub extern "C" fn __rust_jtmb_sqlite_alloc_shutdown(p: *mut core::ffi::c_void) {
     // do nothing
 
 }
@@ -88,7 +88,7 @@ pub extern "C" fn __rust_sqlite_zig_alloc_shutdown(p: *mut core::ffi::c_void) {
 static PAGE_CACHE_PTR: AtomicPtr<u8> = AtomicPtr::new(std::ptr::null_mut());
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn __rust_sqlite_zig_alloc_get_page_cache_buffer(out_size: *mut usize) -> *mut u8 {
+pub unsafe extern "C" fn __rust_jtmb_sqlite_alloc_get_page_cache_buffer(out_size: *mut usize) -> *mut u8 {
     unsafe {
 
         let size = 64 * 1024 * 1024; // 64MB Page Cache

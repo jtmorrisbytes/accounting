@@ -6,7 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let zig_out = zig_out.display().to_string();
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rustc-link-search={}",zig_out);
-    println!("cargo:rustc-link-lib=static={}","sqlite_zig");
+    println!("cargo:rustc-link-lib=static={}","jtmb_sqlite");
 
     Ok(())
 }
