@@ -1,13 +1,13 @@
 use sqlx::Database;
 
-use super::sqlite::{PRAGMA_TABLE_INFO_SQL,SqliteColumnInfo};
+use super::sqlite::{PRAGMA_TABLE_INFO_SQL,PragmaTableInfo};
 
 // #[macro_use]
 use crate::{meta_query_sqlite_pragma_table_info};
 
 #[derive(Debug)]
 pub enum AnyColumnInfo {
-    Sqlite(SqliteColumnInfo),
+    Sqlite(PragmaTableInfo),
 }
 
 
@@ -44,23 +44,11 @@ impl<'t> crate::SchemaInspector<sqlx::any::Any> for sqlx::Transaction<'t, sqlx::
         }
         Ok(vec![])
     }
-    async fn get_metadata(&mut self) -> Result<Self::InformationSchema,anyhow::Error> {
-                match self.backend_name() {
-            sqlx::sqlite::Sqlite::NAME => {
-                let tables = super::sqlite::meta_fn_sqlite_txn_get_sqlite_master(&mut self, Option::<&str>::None, None, None, None).await?;
-                // let t = self::meta_fn_sqlite_txn_get_pragma_table_info_schema(&mut self).await?;
-                dbg!(tables);
-                todo!()
-            }
-            _ => {
-                todo!("not implemented yet")
-            }
-        }
-    }
+    
 }
 
 /// Asks Database if Table exists with Column and Datatype. Only valid with the any driver for sqlite
-pub async fn sqlite_meta_fn_does_table_exist_with_column_and_datatype<Executor>(executor: Executor,table_name: String,r#type: String) -> Result<bool,anyhow::Error>
+pub async fn sqlite_meta_fn_does_table_exist_with_column_and_datatype<Executor>(executor: Executor,table_name: String,column_name:String,r#type: String,include_hidden:bool) -> Result<bool,anyhow::Error>
     where 
     for<'executor> Executor: sqlx::any::AnyExecutor<'executor,Database = sqlx::any::Any>,
     for<'row> (i32,): sqlx::FromRow<'row,<sqlx::any::Any as sqlx::Database>::Row>,
@@ -68,6 +56,6 @@ pub async fn sqlite_meta_fn_does_table_exist_with_column_and_datatype<Executor>(
 
 
 {
-    super::sqlite::meta_fn_does_table_exist_with_column_and_datatype::<Executor,sqlx::any::Any>(executor, table_name, r#type).await.map(|t| t!=0)
+    super::sqlite::meta_fn_get_columns_for_table_with_datatype::<Executor,sqlx::any::Any>(executor, table_name, column_name,r#type,include_hidden).await.map(|t| t!=0)
 }
 

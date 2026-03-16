@@ -15,46 +15,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "accounting_db"
-version = "0.1.0"
-dependencies = [
- "accounting_db_proc_macro",
- "anyhow",
- "async-trait",
- "barrel",
- "dashmap",
- "paste",
- "refinery",
- "serde",
- "sqlx",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "accounting_db_migrations"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "barrel",
- "refinery",
- "reflect-db",
- "sea-query",
- "sqlx",
- "tokio",
-]
-
-[[package]]
-name = "accounting_db_proc_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2798,7 +2758,7 @@ dependencies = [
  "paste",
  "refinery",
  "serde",
- "sqlx",
+ "sqlx 0.8.6",
  "tokio",
  "uuid",
 ]
@@ -4149,7 +4109,7 @@ dependencies = [
  "futures",
  "serde",
  "serde_json",
- "sqlx",
+ "sqlx 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.18",
  "tokio",
 ]
@@ -4501,7 +4461,7 @@ dependencies = [
  "log",
  "rocket-community",
  "rocket_db_pools_codegen-community",
- "sqlx",
+ "sqlx 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "version_check",
 ]
 
@@ -5282,16 +5242,99 @@ dependencies = [
 ]
 
 [[package]]
+name = "sql"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "barrel",
+ "dashmap",
+ "paste",
+ "refinery",
+ "serde",
+ "sql_proc_macro",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "sql_migrations"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "barrel",
+ "refinery",
+ "reflect-db",
+ "sea-query",
+ "sqlx 0.8.6",
+ "tokio",
+]
+
+[[package]]
+name = "sql_proc_macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
+
+[[package]]
+name = "sqlx"
+version = "0.8.6"
+dependencies = [
+ "async-trait",
+ "sqlx-core 0.8.6",
+ "sqlx-macros 0.8.6",
+ "sqlx-mysql 0.8.6",
+ "sqlx-postgres 0.8.6",
+ "sqlx-sqlite 0.8.6",
+]
+
+[[package]]
 name = "sqlx"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fefb893899429669dcdd979aff487bd78f4064e5e7907e4269081e0ef7d97dc"
 dependencies = [
- "sqlx-core",
- "sqlx-macros",
- "sqlx-mysql",
- "sqlx-postgres",
- "sqlx-sqlite",
+ "sqlx-core 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sqlx-macros 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sqlx-mysql 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sqlx-postgres 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sqlx-sqlite 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "sqlx-core"
+version = "0.8.6"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "bytes",
+ "crc",
+ "crossbeam-queue",
+ "either",
+ "event-listener",
+ "futures-core",
+ "futures-intrusive",
+ "futures-io",
+ "futures-util",
+ "hashbrown 0.15.5",
+ "hashlink",
+ "indexmap",
+ "log",
+ "memchr",
+ "once_cell",
+ "percent-encoding",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "smallvec",
+ "thiserror 2.0.18",
+ "tracing",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -5327,8 +5370,18 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
- "uuid",
  "webpki-roots 0.26.11",
+]
+
+[[package]]
+name = "sqlx-macros"
+version = "0.8.6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "sqlx-core 0.8.6",
+ "sqlx-macros-core 0.8.6",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -5339,9 +5392,31 @@ checksum = "a2d452988ccaacfbf5e0bdbc348fb91d7c8af5bee192173ac3636b5fb6e6715d"
 dependencies = [
  "proc-macro2",
  "quote",
- "sqlx-core",
- "sqlx-macros-core",
+ "sqlx-core 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sqlx-macros-core 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "sqlx-macros-core"
+version = "0.8.6"
+dependencies = [
+ "dotenvy",
+ "either",
+ "heck 0.5.0",
+ "hex",
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx-core 0.8.6",
+ "sqlx-mysql 0.8.6",
+ "sqlx-postgres 0.8.6",
+ "sqlx-sqlite 0.8.6",
+ "syn 2.0.117",
+ "url",
 ]
 
 [[package]]
@@ -5360,13 +5435,54 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
- "sqlx-core",
- "sqlx-mysql",
- "sqlx-postgres",
- "sqlx-sqlite",
+ "sqlx-core 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sqlx-mysql 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sqlx-postgres 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sqlx-sqlite 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "syn 2.0.117",
  "tokio",
  "url",
+]
+
+[[package]]
+name = "sqlx-mysql"
+version = "0.8.6"
+dependencies = [
+ "atoi",
+ "base64 0.22.1",
+ "bitflags 2.11.0",
+ "byteorder",
+ "bytes",
+ "crc",
+ "digest 0.10.7",
+ "dotenvy",
+ "either",
+ "futures-channel",
+ "futures-core",
+ "futures-io",
+ "futures-util",
+ "generic-array",
+ "hex",
+ "hkdf",
+ "hmac",
+ "itoa",
+ "log",
+ "md-5",
+ "memchr",
+ "once_cell",
+ "percent-encoding",
+ "rand 0.8.5",
+ "rsa",
+ "serde",
+ "sha1",
+ "sha2 0.10.9",
+ "smallvec",
+ "sqlx-core 0.8.6",
+ "stringprep",
+ "thiserror 2.0.18",
+ "tracing",
+ "uuid",
+ "whoami",
 ]
 
 [[package]]
@@ -5404,7 +5520,42 @@ dependencies = [
  "sha1",
  "sha2 0.10.9",
  "smallvec",
- "sqlx-core",
+ "sqlx-core 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stringprep",
+ "thiserror 2.0.18",
+ "tracing",
+ "whoami",
+]
+
+[[package]]
+name = "sqlx-postgres"
+version = "0.8.6"
+dependencies = [
+ "atoi",
+ "base64 0.22.1",
+ "bitflags 2.11.0",
+ "byteorder",
+ "crc",
+ "dotenvy",
+ "etcetera",
+ "futures-channel",
+ "futures-core",
+ "futures-util",
+ "hex",
+ "hkdf",
+ "hmac",
+ "home",
+ "itoa",
+ "log",
+ "md-5",
+ "memchr",
+ "once_cell",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "smallvec",
+ "sqlx-core 0.8.6",
  "stringprep",
  "thiserror 2.0.18",
  "tracing",
@@ -5442,12 +5593,34 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "smallvec",
- "sqlx-core",
+ "sqlx-core 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "stringprep",
  "thiserror 2.0.18",
  "tracing",
- "uuid",
  "whoami",
+]
+
+[[package]]
+name = "sqlx-sqlite"
+version = "0.8.6"
+dependencies = [
+ "atoi",
+ "flume",
+ "futures-channel",
+ "futures-core",
+ "futures-executor",
+ "futures-intrusive",
+ "futures-util",
+ "libsqlite3-sys",
+ "log",
+ "percent-encoding",
+ "serde",
+ "serde_urlencoded",
+ "sqlx-core 0.8.6",
+ "thiserror 2.0.18",
+ "tracing",
+ "url",
+ "uuid",
 ]
 
 [[package]]
@@ -5468,11 +5641,10 @@ dependencies = [
  "percent-encoding",
  "serde",
  "serde_urlencoded",
- "sqlx-core",
+ "sqlx-core 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 2.0.18",
  "tracing",
  "url",
- "uuid",
 ]
 
 [[package]]

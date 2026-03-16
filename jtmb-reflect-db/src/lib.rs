@@ -21,5 +21,5 @@ pub trait SchemaInspector<DB: sqlx::Database> {
     async fn get_tables(&mut self)-> Result<Vec<Self::TableInfo>,anyhow::Error> {
         todo!("Implement this function")
     }
-    async fn get_metadata(&mut self) -> Result<Self::InformationSchema,anyhow::Error>;
+    // async fn get_metadata(&mut self) -> Result<Self::InformationSchema,anyhow::Error>;
 }

@@ -3,3 +3,4 @@ target/
 ssl/
 out/
 zig/
+zig-out/
