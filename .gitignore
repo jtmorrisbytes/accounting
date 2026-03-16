@@ -4,3 +4,4 @@ ssl/
 out/
 zig/
 zig-out/
+.zig-cache/

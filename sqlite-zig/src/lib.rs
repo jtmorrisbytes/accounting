@@ -10,7 +10,7 @@ pub type Error = Box<dyn std::error::Error>;
 
 pub fn sqlite_zig_init(parameters: u32) -> Result<(),self::Error> {
     unsafe {
-        sqlite_zig_configure(parameters)?;
+        config::sqlite_zig_configure(parameters)?;
         let r = ffi::sqlite_zig_init();
         match r {
             // ffi::SQliteZigInitResult::Ok => Ok(()),
@@ -23,16 +23,7 @@ pub fn sqlite_zig_init(parameters: u32) -> Result<(),self::Error> {
     }
 }
 
-fn sqlite_zig_configure(parameters: u32) -> Result<(),self::Error> {
-    unsafe {
-        let r = ffi::sqlite_zig_configure(parameters);
-        match r {
-            ffi::SqliteConfigResult::Ok => Ok(()),
-            ffi::SqliteConfigResult::Error => Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other,"Configuration error"))),
-            ffi::SqliteConfigResult::UnknownError => Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other,"Unknown configuration error"))),
-        }
-    }
-}
+
 
 
 pub fn sqlite_zig_shutdown() -> Result<(),self::Error> {
@@ -48,5 +39,7 @@ pub fn sqlite_zig_shutdown() -> Result<(),self::Error> {
 
 #[test]
 pub fn test_init() -> Result<(),self::Error> {
-    sqlite_zig_init(1)
+    sqlite_zig_init(1)?;
+    sqlite_zig_shutdown()?;
+    Ok(())
 }

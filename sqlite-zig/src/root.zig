@@ -3,9 +3,13 @@
 const sqlite = @cImport({
     @cInclude("sqlite3.h");
 });
-
+/// imports the public api
 pub const sqlite_zig_alloc = @import("alloc/alloc.zig");
-
+pub const sqlite_zig_config = @import("config/config.zig");
+comptime {
+    _ = sqlite_zig_alloc;
+    _ = sqlite_zig_config;
+}
 const SQLiteZigInitResult = enum(c_int) {
     Ok = 0,
     Error = 1,
@@ -14,7 +18,7 @@ const SQLiteZigInitResult = enum(c_int) {
 };
 
 // initializes the sqlite library. This should be called before using any other SQLite functions. It sets up internal data structures and prepares the library for use.
-export fn sqlite_zig_v0_init() SQLiteZigInitResult {
+export fn sqlite_zig_init() SQLiteZigInitResult {
     const retval = sqlite.sqlite3_initialize();
     const r = switch (retval) {
         sqlite.SQLITE_OK => SQLiteZigInitResult.Ok,
@@ -32,7 +36,7 @@ const SQliteZigShutdownResult = enum(i32) {
 };
 
 /// de-initializes the SQLite library. This should be called when your application is done using SQLite, typically just before exiting.
-export fn sqlite_zig_v0_shutdown() SQliteZigShutdownResult {
+export fn sqlite_zig_shutdown() SQliteZigShutdownResult {
     const retval = sqlite.sqlite3_shutdown();
     const r = switch (retval) {
         sqlite.SQLITE_OK => SQliteZigShutdownResult.Ok,

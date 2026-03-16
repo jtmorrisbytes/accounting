@@ -1,5 +1,5 @@
 const sqlite = @cImport({
-    @cInclude("sqlite.h");
+    @cInclude("sqlite3.h");
 });
 // mem management callback functions
 

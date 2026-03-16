@@ -49,13 +49,11 @@ pub fn build(b: *std.Build) !void {
     // const generated_c = assemble_step.addOutputFileArg("sqlite3.c");
     // const generated_h = assemble_step.addOutputFileArg("sqlite3.h");
 
-    const sql_mod = b.addModule("sqlite_zig", .{
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
-
+    // do not enable runtime safety features ... yes you heard me right :)
+    const sql_mod = b.addModule("sqlite_zig", .{ .root_source_file = b.path("src/root.zig"), .target = target, .optimize = optimize, .link_libc = true, .sanitize_c = .off, .stack_check = false, .stack_protector = false });
+    sql_mod.stack_check = false;
+    sql_mod.stack_protector = false;
+    sql_mod.sanitize_c = .off;
     const lib = b.addLibrary(.{
         .name = "sqlite_zig",
         .linkage = .static,
@@ -70,6 +68,9 @@ pub fn build(b: *std.Build) !void {
             "-DSQLITE_THREADSAFE=0",
             "-DSQLITE_TEMP_STORE=3",
             "-DSQLITE_OMIT_AUTOINIT=1",
+            "-fno-stack-protector", // Extra insurance
+            "-fno-stack-check", // Explicitly for Clang
+            "-mno-stack-arg-probe", // The magic flag to kill ___chkstk_ms
             // Use your 48GB RAM for temp tables
         },
     });
