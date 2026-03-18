@@ -1,4 +1,2 @@
 #[unsafe(no_mangle)]
-pub fn webassembly_main() {
-
-}
+pub fn webassembly_main() {}

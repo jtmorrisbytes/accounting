@@ -1,4 +1,3 @@
-
 // pub fn write_be<const N: usize>(writer: &mut std::io::Write)
 
 /// write unsigned 8 bit integer into buffer
@@ -37,14 +36,13 @@ const TPM_CC_START_AUTH_SESSION: u32 = 0x176;
 
 #[cfg(windows)]
 pub mod win32 {
-    use std::io::{Cursor};
+    use std::io::Cursor;
 
     use windows::Win32::{
         Foundation::ERROR_INVALID_PARAMETER,
         System::TpmBaseServices::{
-            TBS_COMMAND_LOCALITY_ZERO, TBS_COMMAND_PRIORITY_NORMAL,
-            TBS_CONTEXT_PARAMS, TPM_DEVICE_INFO, Tbsi_GetDeviceInfo, Tbsip_Context_Close,
-            Tbsip_Submit_Command,
+            TBS_COMMAND_LOCALITY_ZERO, TBS_COMMAND_PRIORITY_NORMAL, TBS_CONTEXT_PARAMS,
+            TPM_DEVICE_INFO, Tbsi_GetDeviceInfo, Tbsip_Context_Close, Tbsip_Submit_Command,
         },
     };
 
@@ -86,8 +84,7 @@ pub mod win32 {
                     TBS_E_TOO_MANY_TBS_CONTEXTS, TBS_E_TPM_NOT_FOUND,
                 },
                 System::TpmBaseServices::{
-                    TBS_CONTEXT_VERSION_TWO,
-                    TBS_SUCCESS, Tbsi_Context_Create,
+                    TBS_CONTEXT_VERSION_TWO, TBS_SUCCESS, Tbsi_Context_Create,
                 },
             },
             core::HRESULT,

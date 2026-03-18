@@ -11,7 +11,10 @@ fn sqlite_scripts_path() -> PathBuf {
 }
 
 #[proc_macro_attribute]
-pub fn sqlite_impl(attributes: proc_macro::TokenStream,item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn sqlite_impl(
+    attributes: proc_macro::TokenStream,
+    item: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
     // let input = proc_macro2::TokenStream::from(input);
     let input = parse_macro_input!(item as syn::ItemStruct);
     let ty = &input.ident;
@@ -37,16 +40,16 @@ pub fn sqlite_impl(attributes: proc_macro::TokenStream,item: proc_macro::TokenSt
         .to_string();
     let ty_update = ty_sql_path.join("update.sql").to_string_lossy().to_string();
 
-
-
     // the update query_as
     let mut query_as = format!("sqlx_query_as!({ty},{ty_insert}");
     let fields = match &input.fields {
-        Fields::Named(f) =>&f.named,
-        _=>{return  quote!{compile_error!("struct #ty only named fields are supported")}.into();}
+        Fields::Named(f) => &f.named,
+        _ => {
+            return quote! {compile_error!("struct #ty only named fields are supported")}.into();
+        }
     };
     for field in fields {
-        query_as.push_str(&format!(",t.{}",field.ident.as_ref().unwrap()));;
+        query_as.push_str(&format!(",t.{}", field.ident.as_ref().unwrap()));
     }
     query_as.push_str(")");
 

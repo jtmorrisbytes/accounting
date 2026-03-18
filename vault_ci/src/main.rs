@@ -412,11 +412,11 @@ fn build_and_run_tests_linux(
             // let artifact2 = artifact.replace(drive_path, &drive_letter);
             // these are no longer valid
             // artifact = artifact2;
-            let mut artifact =  "/mnt/".to_string() + &drive_letter + &artifact;
+            let mut artifact = "/mnt/".to_string() + &drive_letter + &artifact;
             artifact = artifact.trim().to_string();
             let wsl = std::process::Command::new("wsl").arg(artifact).status()?;
             if !wsl.success() {
-                return Err("Tests failed!".into())
+                return Err("Tests failed!".into());
             }
         }
     }

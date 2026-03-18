@@ -251,7 +251,7 @@ pub fn app_main() {
 
     // the app thread
     let (app_to_ui_thread_sender, ui_app_thread_reciever) = channel::<UiMessage>();
-    let app  = std::thread::spawn(move || {
+    let app = std::thread::spawn(move || {
         run_vault(
             c1,
             service_status_sender,
@@ -281,18 +281,16 @@ pub fn app_main() {
             println!("async runtime started. attempting to start rocket");
             // TODO tell the 'app' thread that the server is starting
             let rocket = vault_service::server::build_rocket(config).ignite().await;
-            
+
             let rocket = match rocket {
                 Ok(r) => r,
                 Err(e) => {
                     println!("Failed to ignite rocket: {e}... requesting shutdown");
                     app_message_sender.send(AppMessage::RequestShutdown).ok();
                     return;
-
                 }
             };
-            
-            
+
             let shutdown = rocket.shutdown();
             println!("launching");
             let rocket_launch_result = vault_service::server::rocket::tokio::spawn(rocket.launch());
@@ -352,12 +350,10 @@ fn main() {
         }
         #[cfg(all(not(target_os = "windows"), target_os = "linux"))]
         {
-            
             // listen for signals and forward them to the seperate thread
             app_main();
         }
-    }
-    else {
+    } else {
         // dont run as service
         app_main();
     }

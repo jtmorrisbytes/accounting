@@ -187,7 +187,7 @@ pub fn figment(
     Ok(figment)
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize,Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct Config {
     pub vault_data_directory: PathBuf,
     pub vault_config_direcory: PathBuf,
@@ -211,7 +211,7 @@ impl Config {
         };
         Ok(s)
     }
-    pub fn try_load<P: AsRef<std::path::Path>>(p:P) -> Result<Self,Box<dyn std::error::Error>> {
+    pub fn try_load<P: AsRef<std::path::Path>>(p: P) -> Result<Self, Box<dyn std::error::Error>> {
         let figment = self::figment(Some(p.as_ref()))?;
         figment.extract().map_err(|e| e.into())
     }
@@ -231,7 +231,10 @@ impl Config {
     }
 
     /// overwrites the config file to the destination specified
-    pub fn write<P: AsRef<std::path::Path>>(&self,path: P) -> Result<(),Box<dyn std::error::Error>> {
+    pub fn write<P: AsRef<std::path::Path>>(
+        &self,
+        path: P,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let buffer = toml::to_string(self)?;
         std::fs::File::create(path.as_ref())?.write_all(buffer.as_bytes())?;
         Ok(())

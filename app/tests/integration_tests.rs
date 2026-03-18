@@ -1,5 +1,5 @@
 #[test]
-fn test_auth_flow() -> Result<(),Box<dyn std::error::Error>> {
+fn test_auth_flow() -> Result<(), Box<dyn std::error::Error>> {
     let rocket = accounting::server::rocket();
     let test_client = rocket::local::blocking::Client::tracked(rocket)?;
 
@@ -7,7 +7,9 @@ fn test_auth_flow() -> Result<(),Box<dyn std::error::Error>> {
 
     let response = test_client.get("/").dispatch();
     if !response.status().class().is_redirection() {
-        return Err("Client is not authenticated. Client should perform redirect to auth flow".into());
+        return Err(
+            "Client is not authenticated. Client should perform redirect to auth flow".into(),
+        );
     }
     Ok(())
 }

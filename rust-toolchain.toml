@@ -1,2 +1,2 @@
 [toolchain]
-channel="custom-nightly"
+channel="nightly"

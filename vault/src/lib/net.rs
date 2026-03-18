@@ -22,7 +22,7 @@
 //             tokio::task::spawn(async move {
 //                 let service = hyper::service::service_fn(move | req: Request<Incoming>|{
 //                     async move {
-//                         let response = 
+//                         let response =
 //                         format!("<!doctype html>\
 //                                 <html>\
 //                                 <head>\
@@ -53,7 +53,6 @@
 //                                 </body>
 //                                 ");
 
-
 //                         match (req.method(), req.uri())  {
 //                             (&Method::GET,uri) if uri == "/" => {
 //                                 Response::builder()
@@ -79,9 +78,9 @@
 //             // break;
 //         }
 
-//         Result::<_,Box<dyn std::error::Error>>::Ok(()) 
+//         Result::<_,Box<dyn std::error::Error>>::Ok(())
 //     })?;
-    
+
 //     Ok(())
 // }
 

@@ -253,16 +253,14 @@ pub fn generate_entropy<const N: usize>(buffer: &mut [u8; N]) -> Result<(), anyh
     Ok(())
 }
 
-
-pub fn sha_256<Input: AsRef<[u8]>,Output: AsMut<[u8]>>(input:Input, mut output: Output) {
+pub fn sha_256<Input: AsRef<[u8]>, Output: AsMut<[u8]>>(input: Input, mut output: Output) {
     let d = aws_lc_rs::digest::digest(&aws_lc_rs::digest::SHA256, input.as_ref());
     if output.as_mut().len() < d.as_ref().len() {
         panic!("Output len smaller than the length of the digest")
     }
     for (i, byte) in d.as_ref().iter().enumerate() {
-        output.as_mut()[i]  = *byte;
+        output.as_mut()[i] = *byte;
     }
-    
 }
 
 pub fn generate_bips() -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -275,10 +273,10 @@ pub fn generate_bips() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     }
     generate_entropy(&mut entropy)?;
 
-    let mut entropy_hash= [0_u8;32];
-    sha_256(&entropy,&mut entropy_hash);
+    let mut entropy_hash = [0_u8; 32];
+    sha_256(&entropy, &mut entropy_hash);
     let checksum = entropy_hash[0];
-        // .ok_or("failed to get checksum from hash")?;
+    // .ok_or("failed to get checksum from hash")?;
 
     let mut all_bits = Vec::with_capacity(264);
     for byte in entropy.iter().chain(std::iter::once(&checksum)) {
@@ -394,7 +392,7 @@ where
         .collect();
 
     // 4. Calculate SHA-256 of Entropy
-    let mut hash = [0_u8;32];
+    let mut hash = [0_u8; 32];
     sha_256(&entropy_bytes, &mut hash);
     // dbg!(&hash);
 

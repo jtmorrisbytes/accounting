@@ -21,7 +21,6 @@ pub struct Cli {
     pub command: Command,
 }
 
-
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     // let mut args = std::env::args();
     // let _ = args.next().ok_or("")?;
@@ -33,27 +32,26 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Initialize { with_existing_bips } => {
             let config = if !vault::config::config_file_exists().unwrap() {
                 vault::config::Config::try_default().unwrap()
-            }
-            else {
-                vault::config::Config::try_load(vault::config::get_service_config_directory().unwrap()).unwrap()
+            } else {
+                vault::config::Config::try_load(
+                    vault::config::get_service_config_directory().unwrap(),
+                )
+                .unwrap()
             };
             // if the user already has a bips39 passphrase
-            println!("This function is not complete yet. expect bugs");            
+            println!("This function is not complete yet. expect bugs");
             if with_existing_bips {
                 let mut phrases = vec![];
                 // collect the bips passphrase from secure method
                 vault::term::prompt_user_for_bips(&mut phrases)?;
                 println!("The program has recieved your bips 39 passcode");
                 bips = phrases
-            }
-            else {
+            } else {
                 println!("This program will generate a bips 39 passphrase. please wait");
                 bips = vault::bips::generate_bips()?;
             }
-            let qrcode = qrcodegen::QrCode::encode_text(
-                &bips.join(" "),
-                qrcodegen::QrCodeEcc::High,
-            )?;
+            let qrcode =
+                qrcodegen::QrCode::encode_text(&bips.join(" "), qrcodegen::QrCodeEcc::High)?;
             vault::graphics::render_qrcode_to_console(&qrcode);
             println!(
                 "Here is your BIPS39 QR code. Make sure you scan this code and save it somewhere.\n Press enter to continue"
@@ -78,12 +76,9 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             line = line.trim().to_string();
             dbg!(&line);
             if line == "Y" {
-                println!(
-                    "the program is attempting to send the job to the requested printer"
-                );
+                println!("the program is attempting to send the job to the requested printer");
                 vault::print::win32_print_bip39_using_gdi(&qrcode, &bips)?;
-            }
-            else {
+            } else {
                 println!("Please make sure you have a backup copy");
             }
             drop(line);
@@ -96,15 +91,19 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                 confirmation = confirmation.trim().to_string();
             }
             // we will now 'attempt' to verify the bips
-            vault::bips::verify(bips.as_slice()).map_err(|e|e.to_string())?;
-
-
+            vault::bips::verify(bips.as_slice()).map_err(|e| e.to_string())?;
 
             // create the service directory if it doesnt exist
             std::fs::create_dir_all(&config.vault_data_directory).ok();
             std::fs::create_dir_all(&config.vault_config_direcory).ok();
             // write the vault config
-            config.write(&config.vault_config_direcory.join(vault::config::CONFIG_FILENAME)).ok();
+            config
+                .write(
+                    &config
+                        .vault_config_direcory
+                        .join(vault::config::CONFIG_FILENAME),
+                )
+                .ok();
 
             // copy the configuration, files, and dependencies needed into the vault data and config directories
             Ok(())
@@ -112,4 +111,3 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => Err("".into()),
     }
 }
-

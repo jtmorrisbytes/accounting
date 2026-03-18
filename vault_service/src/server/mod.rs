@@ -3,8 +3,8 @@ use std::sync::Arc;
 // we plan on implementing a vault ui based on https and html
 // reexport the rocket crate;
 pub use rocket;
-use rocket::{Build, Rocket};
 use rocket::tokio;
+use rocket::{Build, Rocket};
 use wasmer::{
     Engine, Function, FunctionEnv, Instance, Module, Store,
     sys::{CpuFeature, Features, NativeEngineExt, Target, Triple},
@@ -31,7 +31,7 @@ fn run_wasmer_webassembly(wasm_bytes: &[u8]) -> Result<(), Box<dyn std::error::E
         Target::new(Triple::host(), CpuFeature::for_host()),
         Features::detect_from_wasm(wasm_bytes)?,
     ));
-    let (i,wasi_env) = wasi_env_builder.instantiate(module, &mut store)?;
+    let (i, wasi_env) = wasi_env_builder.instantiate(module, &mut store)?;
     // let mut fn_env = FunctionEnv::new(&mut store, wasi_env);
     // let imports = generate_import_object_from_env(
     //     &mut store,
@@ -68,10 +68,8 @@ pub fn load_wasm_from_crate_root_devtime(lib_name: &str) -> Vec<u8> {
     //     .unwrap();
     // let out_dir = env!("OUT_DIR");
     todo!();
-    let mut f = std::fs::File::open(
-        std::path::Path::new("").join("libvault_ui_wasm.wasm"),
-    )
-    .unwrap();
+    let mut f =
+        std::fs::File::open(std::path::Path::new("").join("libvault_ui_wasm.wasm")).unwrap();
 
     let mut bin = vec![];
     std::io::copy(&mut f, &mut bin).unwrap();

@@ -31,14 +31,10 @@ impl Fairing for CspFairing {
     }
 }
 
-
-
-
 #[rocket::get("/")]
 fn index() -> rocket_dyn_templates::Template {
     Template::render("index", rocket_dyn_templates::context! {})
 }
-
 
 use rocket_db_pools::Database;
 use rocket_dyn_templates::Template;

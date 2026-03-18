@@ -3,7 +3,6 @@ use std::io::Write;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use zeroize::Zeroize;
 
-
 pub fn prompt_user_for_bips(phrases: &mut Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "Please enter your 28 phrase bips recovery key or phrase,\n\
@@ -28,7 +27,7 @@ pub fn prompt_user_for_bips(phrases: &mut Vec<String>) -> Result<(), Box<dyn std
     loop {
         // 256 bits entropy
 
-        if phrases.len()  >= crate::bips::BIPS_WORDLEN_COUNT_ENTROPY_256_BITS {
+        if phrases.len() >= crate::bips::BIPS_WORDLEN_COUNT_ENTROPY_256_BITS {
             break;
         }
 
@@ -78,11 +77,8 @@ pub fn prompt_user_for_bips(phrases: &mut Vec<String>) -> Result<(), Box<dyn std
                 ..
             }) if kind == KeyEventKind::Press => {
                 if let None = phrase.pop() {
-                    let _ = crossterm::execute!(
-                        std::io::stdout(),
-                        crossterm::style::Print("\x07")
-                    )
-                    .ok();
+                    let _ = crossterm::execute!(std::io::stdout(), crossterm::style::Print("\x07"))
+                        .ok();
                 }
             }
             crossterm::event::Event::Key(KeyEvent {
@@ -93,11 +89,8 @@ pub fn prompt_user_for_bips(phrases: &mut Vec<String>) -> Result<(), Box<dyn std
                 if c.is_ascii_alphabetic() {
                     phrase.push(c);
                 } else {
-                    let _ = crossterm::execute!(
-                        std::io::stdout(),
-                        crossterm::style::Print("\x07")
-                    )
-                    .ok();
+                    let _ = crossterm::execute!(std::io::stdout(), crossterm::style::Print("\x07"))
+                        .ok();
                 }
             }
             _ => {}

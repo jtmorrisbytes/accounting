@@ -11,51 +11,46 @@ const CHROME_DEV_TOOLS_URL: &str = "https://chromedevtools.github.io/devtools-pr
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 
 pub struct CDFObjectProperties {
-    name:String,
-    description:Option<String>,
-    #[serde(rename="$ref")]
+    name: String,
+    description: Option<String>,
+    #[serde(rename = "$ref")]
     external_refrence: Option<String>,
     #[serde(default)]
-    optional:bool,
-    r#type:Option<String>,
+    optional: bool,
+    r#type: Option<String>,
     items: Option<serde_json::Value>,
     #[serde(flatten)]
-    other: serde_json::Value
+    other: serde_json::Value,
 }
-
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct CDFCommands {
-    name:String,
+    name: String,
     #[serde(default)]
-    decription:String,
+    decription: String,
     #[serde(default)]
-    parameters: Vec<serde_json::Value>
+    parameters: Vec<serde_json::Value>,
 }
-
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct CDFEvents {
     name: String,
-    description:String,
+    description: String,
     #[serde(default)]
-    experimental:bool,
-    parameters: Option<serde_json::Value>
+    experimental: bool,
+    parameters: Option<serde_json::Value>,
 }
-
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct CDPDomainTypeDef {
-    id:String,
-    description:Option<String>,
-    #[serde(rename="type")]
-    ty:String,
+    id: String,
+    description: Option<String>,
+    #[serde(rename = "type")]
+    ty: String,
     // #[serde(default)]
-    r#enum:Option<Vec<String>>,
-    properties:Option<Vec<CDFObjectProperties>>
-
+    r#enum: Option<Vec<String>>,
+    properties: Option<Vec<CDFObjectProperties>>,
 }
-
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct CDPVersion {
@@ -67,14 +62,14 @@ pub struct CDPVersion {
 pub struct CDPDomain {
     domain: String,
     #[serde(default)]
-    experimental:bool,
+    experimental: bool,
     #[serde(default)]
     dependencies: Vec<String>,
     #[serde(default)]
-    types:Vec<CDPDomainTypeDef>,
+    types: Vec<CDPDomainTypeDef>,
     commands: Vec<CDFCommands>,
     #[serde(default)]
-    events: Vec<serde_json::Value>
+    events: Vec<serde_json::Value>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -145,42 +140,41 @@ pub async fn parse_js_protocol_from_json_file_cached() -> Result<CDPSchema, anyh
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
-
     let s: CDPSchema = parse_browser_protocol_from_json_file_cached().await?;
 
+    let tys = std::collections::HashMap::<String, String>::new();
 
-    let tys = std::collections::HashMap::<String,String>::new();
-
-    pub enum OProps {
-
-    }
+    pub enum OProps {}
 
     pub enum TType {
         String,
         StringEnum,
-        Object{properties: Vec<OProps>},
+        Object { properties: Vec<OProps> },
         Array,
         Integer,
-        Number
+        Number,
     }
     // types
     for d in s.domains {
         for t in d.types {
-            let key = format!("{}.{}",d.domain,t.id);
+            let key = format!("{}.{}", d.domain, t.id);
             match t.ty.as_str() {
-                "string" =>{
+                "string" => {
                     println!("{key} ty=string")
                 }
-                "object" =>{
+                "object" => {
                     println!("{key} ty=object");
                     for p in t.properties.unwrap_or_default() {
-                        
-                        println!("\tprop: {}, type: '{}', ref: '{}' optional:{}",p.name,p.r#type.unwrap_or_default(),p.external_refrence.unwrap_or_default(),p.optional,);
+                        println!(
+                            "\tprop: {}, type: '{}', ref: '{}' optional:{}",
+                            p.name,
+                            p.r#type.unwrap_or_default(),
+                            p.external_refrence.unwrap_or_default(),
+                            p.optional,
+                        );
                     }
-                },
+                }
                 "array" => {
-                    
                     println!("{key} ty=array");
                 }
                 "integer" => {
@@ -192,11 +186,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "enum" => {
                     panic!("enum!")
                 }
-                u @ _=>{
+                u @ _ => {
                     println!("unknown type {u}")
                 }
             }
-            
+
             // dbg!(key,t.ty);
         }
     }

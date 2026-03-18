@@ -1,1 +1,5 @@
-pub const HTMX_MIN_JS_HASH_SHA_256: &str = include_str!(concat!(env!("OUT_DIR"),"\\browserhash","\\htmx.min.js.sha256"));
+pub const HTMX_MIN_JS_HASH_SHA_256: &str = include_str!(concat!(
+    env!("OUT_DIR"),
+    "\\browserhash",
+    "\\htmx.min.js.sha256"
+));

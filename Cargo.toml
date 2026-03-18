@@ -1,13 +1,17 @@
 
 
 [workspace]
-members = ["app","sqlite-zig","jtmb-reflect-db","sql","sql/accounting_proc_macro","sql/migrations","vault","vault_ui","vault_service",
+members = ["app","jtmb_db_drivers/jtmb_sqlite","jtmb_db_drivers/jtmb_db_core","jtmb_db_drivers/jtmb_postgres","jtmb_db_drivers/jtmb-reflect-db","sql","sql/accounting_proc_macro","sql/migrations","vault","vault_ui","vault_service",
 "vault_ci","chrome_devtools_protocol",
 "chrome_devtools_protocol_parser_and_builder"
 ]
 resolver="3"
 [workspace.dependencies]
+uuid = "~1.22.0"
 #hot-lib-reloader = "0.8.2"
 reqwest = "0.13.2"
 rocket = "0.5.1"
 sqlx={version="^0.8",path="../sqlx_0_8_6_port"}
+tokio = { version = "1.0", features = ["full"] }
+[profile.release]
+lto="fat"

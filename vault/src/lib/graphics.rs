@@ -6,11 +6,11 @@ use zeroize::Zeroize;
 /// output format blue,green,red with unsiged 8 bit integers
 // const BLACK_PIXEL: u8 = 0;
 // const WHITE_PIXEL: u8 = 0;
-pub fn render_qrcode_pix_bgr_u8(qr: &qrcodegen::QrCode, module_size: usize) -> (Vec<u8>,usize) {
+pub fn render_qrcode_pix_bgr_u8(qr: &qrcodegen::QrCode, module_size: usize) -> (Vec<u8>, usize) {
     // you cannot have a zero size
     let quiet_zone = 4;
     let total_modules = qr.size() as usize + (quiet_zone * 2);
-    
+
     let pixel_dim = total_modules * module_size;
     let row_bytes = pixel_dim * 3;
     let stride = (row_bytes + 3) & !3; // Align to 4-byte boundary
@@ -30,12 +30,12 @@ pub fn render_qrcode_pix_bgr_u8(qr: &qrcodegen::QrCode, module_size: usize) -> (
                     for px in 0..module_size {
                         let current_y = start_y + py;
                         let current_x = start_x + px;
-                        
-                        // BMPs are stored bottom-to-top by default. 
+
+                        // BMPs are stored bottom-to-top by default.
                         // To write top-to-bottom, we use a negative height in the header,
                         // which allows us to index the buffer normally.
                         let offset = (current_y * stride) + (current_x * 3);
-                        pixel_data[offset] = 0;     // B
+                        pixel_data[offset] = 0; // B
                         pixel_data[offset + 1] = 0; // G
                         pixel_data[offset + 2] = 0; // R
                     }
@@ -43,7 +43,7 @@ pub fn render_qrcode_pix_bgr_u8(qr: &qrcodegen::QrCode, module_size: usize) -> (
             }
         }
     }
-    (pixel_data,pixel_dim)
+    (pixel_data, pixel_dim)
 }
 
 pub fn render_qrcode_to_console(qr: &qrcodegen::QrCode) -> () {
@@ -66,17 +66,27 @@ pub fn render_qrcode_to_console(qr: &qrcodegen::QrCode) -> () {
         println!();
     }
 }
-/// assumes the data is a valid bitmap file and writes it to the destination specified 
-pub fn write_bitmap_bgr<P: AsRef<Path>>(path: P , buffer: &Vec<u8>,bi_width:i32,bi_height:i32) -> std::io::Result<()> {
+/// assumes the data is a valid bitmap file and writes it to the destination specified
+pub fn write_bitmap_bgr<P: AsRef<Path>>(
+    path: P,
+    buffer: &Vec<u8>,
+    bi_width: i32,
+    bi_height: i32,
+) -> std::io::Result<()> {
     let mut output_buf = vec![];
-    output_buf.extend_from_slice(b"BM".into_iter().map(|b|b.to_le()).collect::<Vec<_>>().as_slice());
+    output_buf.extend_from_slice(
+        b"BM"
+            .into_iter()
+            .map(|b| b.to_le())
+            .collect::<Vec<_>>()
+            .as_slice(),
+    );
     output_buf.extend_from_slice((54_u32 + buffer.len() as u32).to_le_bytes().as_slice());
     // reserved 1
     output_buf.extend_from_slice(0_u16.to_le_bytes().as_slice());
     // reserved 2
     output_buf.extend_from_slice(0_u16.to_le_bytes().as_slice());
     output_buf.extend_from_slice(54_u32.to_le_bytes().as_slice());
-
 
     // BITMAPINFOHEADER
     output_buf.extend_from_slice(40_u32.to_le_bytes().as_slice());
@@ -100,7 +110,11 @@ pub fn write_bitmap_bgr<P: AsRef<Path>>(path: P , buffer: &Vec<u8>,bi_width:i32,
 
     output_buf.extend(buffer);
 
-    let mut file = std::fs::OpenOptions::new().create(true).truncate(true).write(true).open(path)?;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(path)?;
     file.write_all(&output_buf)?;
     file.flush()?;
     drop(file);
@@ -111,8 +125,6 @@ pub fn write_bitmap_bgr<P: AsRef<Path>>(path: P , buffer: &Vec<u8>,bi_width:i32,
 
     Ok(())
 }
-
-
 
 pub fn render_qr_to_svg(qr: &qrcodegen::QrCode) -> String {
     let mut path = String::with_capacity(qr.size() as usize * 15);
@@ -127,7 +139,9 @@ pub fn render_qr_to_svg(qr: &qrcodegen::QrCode) -> String {
     format!(r#"<path fill="black" d="{path}"/>"#)
 }
 
-pub fn render_bips39_phrases_to_html(mut phrases: Vec<String>) -> Result<String,Box<dyn std::error::Error>> {
+pub fn render_bips39_phrases_to_html(
+    mut phrases: Vec<String>,
+) -> Result<String, Box<dyn std::error::Error>> {
     // combine the phrase
     let passphrase = phrases.join(" ");
     let qr = qrcodegen::QrCode::encode_text(&passphrase, qrcodegen::QrCodeEcc::High)?;
@@ -138,24 +152,27 @@ pub fn render_bips39_phrases_to_html(mut phrases: Vec<String>) -> Result<String,
     let mut qr_svg = render_qr_to_svg(&qr);
 
     let mut top_offset = ((root_viewbox_y * 5) / 100);
-    
-    qr_svg = format!("<g transform=\"translate({},{top_offset})\">{qr_svg}<g>",((root_viewbox_x * 50) / 100) - qr.size() / 2 );
-    
+
+    qr_svg = format!(
+        "<g transform=\"translate({},{top_offset})\">{qr_svg}<g>",
+        ((root_viewbox_x * 50) / 100) - qr.size() / 2
+    );
+
     top_offset = top_offset + qr.size() as usize;
 
     // let mut text_start_y = 0;
-    let passcode_header = format!("<text y=\"{top_offset}\" font-size=\"6\">Your bip 39 passcode is</text>");
+    let passcode_header =
+        format!("<text y=\"{top_offset}\" font-size=\"6\">Your bip 39 passcode is</text>");
 
     top_offset = top_offset + 5;
 
     let mut text_group_contents = String::new();
 
-
     let row_height = 16;
 
-    for (i,phrase) in phrases.iter().enumerate() {
-        let col = i%4;
-        let row = i/4;
+    for (i, phrase) in phrases.iter().enumerate() {
+        let col = i % 4;
+        let row = i / 4;
 
         // let col_width = phrase.len() * 5;
         let x = col * (30);
@@ -163,31 +180,35 @@ pub fn render_bips39_phrases_to_html(mut phrases: Vec<String>) -> Result<String,
         // let rect_width = phrase.len() as f32 * 2.0;
         text_group_contents.push_str(&format!("<g transform=\"translate({x},{y})\"> <rect width=\"28\" height=\"10\" fill=\"#f0f0f0\" rx=\"2\" /> <text x=\"5\" y=\"7\" font-family=\"monospace\" font-size=\"5\">{phrase}</text></g>"));
         text_group_contents.push_str("\n");
-
     }
     phrases.zeroize();
-    top_offset = top_offset + row_height * (phrases.len() / 4 ) + 5;
+    top_offset = top_offset + row_height * (phrases.len() / 4) + 5;
 
-    let message = format!("<text y=\"{top_offset}\" font-size=\"6\" font-family=\"monospace\">Print this file for your records.</text>");
+    let message = format!(
+        "<text y=\"{top_offset}\" font-size=\"6\" font-family=\"monospace\">Print this file for your records.</text>"
+    );
     top_offset = top_offset + 10;
-    let message2 = format!("<text y=\"{top_offset}\" font-size=\"4\" font-family=\"monospace\">If you loose this file, there may be no way to recover your data</text>"); 
-    
-    
+    let message2 = format!(
+        "<text y=\"{top_offset}\" font-size=\"4\" font-family=\"monospace\">If you loose this file, there may be no way to recover your data</text>"
+    );
+
     // let text_group = format!("<g transform=translate(0,1) width=\"80%\">{text_group_contents}</g>",top_offset);
-    let root_svg = format!("<svg width=\"8.5in\" height=\"11in\" viewBox=\"0 0 210 297\" preserveAspectRatio=\"xMidYMin meet\">{qr_svg}\n{passcode_header}\n{text_group_contents}\n{message}\n{message2}</svg>");
+    let root_svg = format!(
+        "<svg width=\"8.5in\" height=\"11in\" viewBox=\"0 0 210 297\" preserveAspectRatio=\"xMidYMin meet\">{qr_svg}\n{passcode_header}\n{text_group_contents}\n{message}\n{message2}</svg>"
+    );
 
     let html = format!("<!doctype html> <html> <body>{root_svg}</body> </html>");
     // for each passphrase, generate a text node
 
-
     Ok(html)
 }
 
-
-pub fn write_qrcode_to_bitmap<P:AsRef<Path>>(path:P,qr: &qrcodegen::QrCode) -> Result<(),Box<dyn std::error::Error>> {
-    let (buf,pixel_dims) = self::render_qrcode_pix_bgr_u8(&qr, 2);
+pub fn write_qrcode_to_bitmap<P: AsRef<Path>>(
+    path: P,
+    qr: &qrcodegen::QrCode,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let (buf, pixel_dims) = self::render_qrcode_pix_bgr_u8(&qr, 2);
     self::write_bitmap_bgr(path, &buf, pixel_dims as i32, pixel_dims as i32)?;
 
-    
     Ok(())
 }
