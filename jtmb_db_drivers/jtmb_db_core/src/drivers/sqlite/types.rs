@@ -1,7 +1,5 @@
 use libsqlite3_sys::{
-    sqlite3_bind_double, sqlite3_bind_int64, sqlite3_bind_text, sqlite3_column_double,
-    sqlite3_column_int64, sqlite3_destructor_type, sqlite3_finalize, sqlite3_prepare_v2,
-    sqlite3_step, sqlite3_stmt,
+    sqlite3_bind_double, sqlite3_bind_int64, sqlite3_bind_text, sqlite3_column_double, sqlite3_column_int64, sqlite3_destructor_type, sqlite3_finalize, sqlite3_prepare_v2, sqlite3_reset, sqlite3_step, sqlite3_stmt
 };
 use std::ops::Deref;
 type Real = f64;
@@ -66,31 +64,59 @@ impl ExtractFrom for Float {
     }
 }
 
-#[repr(transparent)]
-pub struct Statement(*mut sqlite3_stmt);
+// #[repr(transparent)]
+pub struct Statement {
+    ptr: *mut sqlite3_stmt,
+    expected_bind_param_count: i32,
+}
 
 impl Statement {
-    pub(crate) fn prepare<'conn>(connection: &'conn super::ConnectionHandle, sql: &str) -> Self {
+    pub(crate) fn prepare<'conn>(connection: &'conn super::ConnectionHandle, sql: &str) -> Result<Self,String> {
         // let cstring = std::ffi::CString::new(sql).expect("Non null terminated string");
         let mut ptr = std::ptr::null_mut();
         unsafe {
             sqlite3_prepare_v2(
                 **connection,
-                sql.as_ptr(),
+                sql.as_ptr().cast(),
                 sql.len() as i32,
                 &mut ptr,
                 std::ptr::null_mut(),
             );
         }
-        Self(ptr)
+        if ptr.is_null() {
+            return Err("BOOP BOOP BOP BOP **KABOOM** Nullptr".to_string());
+        }
+        let max = unsafe { libsqlite3_sys::sqlite3_bind_parameter_count(ptr) };
+        let s = Self {
+            ptr,
+            expected_bind_param_count: max,
+        };
+        Ok(s)
     }
 
-    pub(crate) fn step(&mut self) -> i32 {
-        debug_assert!(self.0.is_null() == false);
-        unsafe { sqlite3_step(self.0) }
+    pub(crate) fn step(&mut self) -> Result<i32, String> {
+        debug_assert!(self.ptr.is_null() == false);
+
+        let rc = unsafe { sqlite3_step(self.ptr) };
+        match rc {
+            100 | 101 => Ok(rc), // ROW or DONE
+            5 => Err("Database Busy".to_string()),
+            21 => panic!("SQLITE_MISUSE: Logic error in Reactor"),
+            _ => Err(format!("SQLite Error: {}", rc)),
+        }
     }
+    pub(crate) fn bind_params_count(&self) -> i32 {
+        self.expected_bind_param_count
+    }
+    pub(crate) fn reset(&mut self) {
+        debug_assert!(self.ptr.is_null() == false);
+        let _rc = unsafe {
+            sqlite3_reset(self.ptr)
+        };
+    }
+    pub (crate) fn finalize(self) {}
     pub(crate) fn text(&mut self, col: i32) -> String {
-        unsafe { super::utils::stmt_text_to_string_lossy_empty_if_null(self.0, col) }
+        unsafe { super::utils::stmt_text_to_string_lossy_empty_if_null(self.ptr, col) }
     }
     pub(crate) fn bind<T>(self, col: i32, val: T) -> Self
     where
@@ -98,23 +124,27 @@ impl Statement {
     {
         #[cfg(debug_assertions)]
         {
-            let max = unsafe { libsqlite3_sys::sqlite3_bind_parameter_count(self.0) };
-            if col < 1 || col > max {
+            if col < 1 || col > self.expected_bind_param_count {
                 panic!(
                     "Bind Error: Column index {} is out of range (1..{})",
-                    col, max
+                    col, self.expected_bind_param_count
                 );
             }
         }
-        let rc = val.bind_to(col, self.0);
-        debug_assert_eq!(rc, libsqlite3_sys::SQLITE_OK, "SQLite Bind failed with error code: {}", rc);
+        let rc = val.bind_to(col, self.ptr);
+        debug_assert_eq!(
+            rc,
+            libsqlite3_sys::SQLITE_OK,
+            "SQLite Bind failed with error code: {}",
+            rc
+        );
         self
     }
     pub(crate) fn extract<T>(&self, col: i32) -> T
     where
         T: ExtractFrom,
     {
-        let t = T::extract_from(self.0, col);
+        let t = T::extract_from(self.ptr, col);
         t
     }
 }
@@ -124,18 +154,18 @@ unsafe impl Send for Statement {}
 impl std::ops::Deref for Statement {
     type Target = *mut sqlite3_stmt;
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.ptr
     }
 }
 
 impl std::ops::DerefMut for Statement {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.ptr
     }
 }
 
 impl Drop for Statement {
     fn drop(&mut self) {
-        let _ = unsafe { sqlite3_finalize(self.0) };
+        let _ = unsafe { sqlite3_finalize(self.ptr) };
     }
 }
