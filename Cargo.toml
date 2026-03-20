@@ -1,7 +1,7 @@
 
 
 [workspace]
-members = ["app","jtmb_db_drivers/jtmb_sqlite","jtmb_db_drivers/jtmb_db_core","jtmb_db_drivers/jtmb_postgres","jtmb_db_drivers/jtmb-reflect-db","sql","sql/accounting_proc_macro","sql/migrations","vault","vault_ui","vault_service",
+members = ["app","jtmb_db_drivers/jtmb_db_core","sql","sql/accounting_proc_macro","sql/migrations","vault","vault_ui","vault_service",
 "vault_ci","chrome_devtools_protocol",
 "chrome_devtools_protocol_parser_and_builder"
 ]

@@ -5,9 +5,9 @@ edition="2024"
 
 
 [features]
-sqlite=["sqlx/sqlite","barrel/sqlite3"]
-postgresql=["sqlx/postgres","barrel/pg"]
-mysql=["sqlx/mysql","barrel/mysql"]
+sqlite=["barrel/sqlite3"]
+postgresql=["barrel/pg"]
+mysql=["barrel/mysql"]
 default=["sqlite","postgresql","mysql"]
 serialize=["serde"]
 deserialize=["serde"]
@@ -15,12 +15,12 @@ deserialize=["serde"]
 
 [dependencies]
 paste = "1.0.15"
-sqlx = {workspace=true, features=["migrate","uuid","sqlite"]}
+#sqlx = {workspace=true, features=["migrate","uuid","sqlite"]}
 uuid={version="1.7",features=["v7"]}
 anyhow = "1.0.102"
 tokio = { version = "1.50.0", features = ["full"] }
 dashmap = "6.1.0"
 async-trait = "0.1.89"
 serde = { version = "1.0.228", features = ["derive"],optional=true }
-barrel = "0.7.0"
-refinery = "0.9.0"
+#barrel = "0.7.0"
+#refinery = "0.9.0"
