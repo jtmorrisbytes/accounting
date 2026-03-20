@@ -4,6 +4,8 @@ version="0.1.0"
 edition="2024"
 
 [dependencies]
+crossbeam = "0.8.4"
+dashmap = "6.1.0"
 libsqlite3-sys = { version = "0.37.0", features = ["bundled"] }
 pq-sys = { version = "0.7.5", features = ["bundled"] }
 tokio = { workspace = true, features = ["full"] }
