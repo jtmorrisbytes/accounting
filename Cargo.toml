@@ -11,7 +11,7 @@ uuid = "~1.22.0"
 #hot-lib-reloader = "0.8.2"
 reqwest = "0.13.2"
 rocket = "0.5.1"
-sqlx={version="^0.8",path="../sqlx_0_8_6_port"}
+#sqlx={version="^0.8",path="../sqlx_0_8_6_port"}
 tokio = { version = "1.0", features = ["full"] }
 [profile.release]
 lto="fat"

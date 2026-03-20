@@ -4,5 +4,9 @@ version="0.1.0"
 edition="2024"
 
 [dependencies]
+libsqlite3-sys = { version = "0.37.0", features = ["bundled"] }
+pq-sys = { version = "0.7.5", features = ["bundled"] }
+tokio = { workspace = true, features = ["full"] }
+tokio-stream = { version = "0.1.18", features = ["full"] }
 uuid = {workspace=true}
 

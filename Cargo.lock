@@ -2792,6 +2792,9 @@ dependencies = [
 name = "jtmb_db_core"
 version = "0.1.0"
 dependencies = [
+ "pq-sys",
+ "tokio",
+ "tokio-stream",
  "uuid",
 ]
 
@@ -2801,9 +2804,11 @@ version = "0.1.0"
 dependencies = [
  "crossbeam",
  "dashmap",
+ "jtmb_db_core",
  "mio 1.1.1",
  "pq-sys",
  "tokio",
+ "uuid",
  "windows 0.62.2",
 ]
 

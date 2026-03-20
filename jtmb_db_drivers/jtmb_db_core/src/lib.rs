@@ -1,156 +1,136 @@
 /// just the contracts
 
 /// can driver construct RustType from WireType using Endianness byteroder
-
+pub mod types;
+pub mod query;
+pub mod prepare;
+pub mod connection;
+pub mod execute;
+pub mod fetch;
+pub mod encode_decode;
 
 // a marker struct that represents byteorder
 
-use std::sync::Arc;
+use std::{fmt::Debug, io, marker::PhantomData, ops::Deref, sync::Arc};
+
+use tokio::{io::{AsyncRead, AsyncWrite}, sync::oneshot};
+
+use crate::prepare::ClientPrepareMessage;
 
 
-// seperates the io layer from the decode layer
-// could be file, cursor, reader, etc
-pub trait Transport{}
 
 
-// wire protocol
-pub struct BigEndian;
+#[derive(Debug,Clone)]
+#[repr(transparent)]
+pub struct SharedString(Arc<str>);
 
-impl BigEndian {
-    pub fn from_le_u8(){}
+impl Deref for SharedString {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        self.0.as_ref()
+    }
 }
 
-// tells rust how to move bytes to and from type T for wire protoocl
-// each trait tells the library that you can decode T for any type that has a trait
 
-pub trait DecodeI64 {
+/// our 'connection' type. talks to our background thread or task that we manage
+pub struct Query;
 
-}
 
-pub trait DecodeI32
-    where Self:'static
+
+pub struct ConnectionAborted;
+
+pub struct Retry;
+
+
+
+
+
+
+pub struct ConnectionHandle<Request,Response,Phase> 
+    where Self: 'static
 {
-    fn decode_i32(){}
-}
-pub trait DecodeI16
-    where Self:'static
-{}
-pub trait DecodeI8
-    where Self:'static
-{}
-
-pub trait DecodeU8
-    where Self:'static
-{}
-
-pub trait DecodeU16
-    where Self:'static
-{}
-
-pub trait DecodeU32
-where Self:'static
-{}
-
-pub trait DecodeU64
-where Self:'static
-{}
-
-pub trait DecodeU128
-where Self:'static
-{}
-
-pub trait DecodeBytes
-where Self:'static
-{}
-
-pub trait DecodeUuid
-where Self: 'static {
-    type Error: 'static;
-    fn decode_uuid_from_bytes<B:AsRef<[u8]>>(b:B) -> Result<uuid::Uuid,Self::Error>;
+    inner:tokio::sync::oneshot::Sender<(Request,tokio::sync::oneshot::Sender<Response>)>,
+    phase:Phase
 }
 
+
+// pub trait Connect
+//     where Self: 'static
+// {
+//     type Stream: AsyncRead + AsyncWrite + Unpin + Send + 'static;
+
+//     async fn connect(&self) -> std::io::Result<Self::Stream>;
+// }
+
+pub trait RawPipe {
+    fn recv_packet(&mut self) -> impl Future<Output=io::Result<Arc<[u8]>>> + use<'_,Self>;
+    fn send_packet(&mut self) -> impl Future<Output=io::Result<Arc<[u8]>>> + use<'_,Self>;
+}
 
 
 /// impl D Decode for D for any T that implementd DecodeT
 /// to add more support, create additional traits, blanket decode them
 /// then D is the thing that allows D -> T
+// 1. THE GULP: Only the Protocol implements this.
 
 
 
-pub trait Decode<D>
-    where Self: Sized + 'static
+
+pub struct Row<Protocol> {
+    data: Arc<[u8]>,
+    metadata: Arc<Protocol>
+}
+impl<ProtocolStruct> Row<ProtocolStruct> where ProtocolStruct: Protocol {
+    fn get<RustType>(&self,index:usize) -> std::io::Result<RustType>
+        // where DatabaseType: 'static
+     {
+        let c = self.metadata.decode_column::<RustType>(self.data.clone(),index)?;
+        Ok(c)
+    }
+    fn get_by_name<RustType>(&self,index: usize) -> std::io::Result<RustType> {
+        self.metadata.decode_column::<RustType>(self.data.clone(),index)
+    }
+    fn extract_column<RustType,DatabaseType>(&self,index: usize) -> std::io::Result<RustType> {
+        self.metadata.as_ref().decode_column(self.data.clone(),index)
+    }
+}
+
+
+// the protocol trait decribes how to shuffle bytes for the decode function and
+// must guarentee that it can understand rust type T and Database Type D
+// and convert from to
+
+
+
+
+pub trait Protocol
+    where Self: Sized +'static + Debug
+    
 {
-    // where Converter: Converter
-    fn from_wire(data: Arc<[u8]>) -> Self;
-}
-
-pub trait TryDecode<D>
-    where Self: Sized + 'static
-{
-    type Error;
-    fn try_from_wire(data: Arc<[u8]>) -> Result<Self,Self::Error>;
-}
-// represents raw byte converions for pg wire protocol v3
-pub struct PGWireProtocolV3;
+    type InnerConnection;
+    type ByteOrder;
+    type ConnectOptions;
 
 
-impl<D> Decode<D> for i8 
+    fn connect(&self, options: &Self::ConnectOptions)-> impl Future<Output =  crate::connection::Connection<Self::InnerConnection>> + use<'_,Self>;
+    fn close_connection<T>(&self,connection:&Self::InnerConnection) -> std::io::Result<()>;
+    // called by drop whenever close returns an error
+    fn on_close_fail(&self,error:std::io::Error) {
+        println!("WARNING: Failed to close connection because of an error: {error}");
+        println!("{self:?}")
+    }
+    fn spawn(addr:&str)-> impl Future<Output = std::io::Result<tokio::task::JoinHandle<()>>> + use<'_,Self>;
+    fn fetch_packet_from_reader<R: std::io::Read>(&mut self,reader: &mut R) -> std::io::Result<Arc<[u8]>>;
+    fn gulp<DatabaseType>(&mut self, data: Arc<[u8]>) -> std::io::Result<DatabaseType>
+    where DatabaseType: Sized + 'static;
 
-    where D: DecodeI8 + 'static
-{
-     fn from_wire(data: Arc<[u8]>) -> Self {
-         <D as DecodeI8>::decode_i8()
-     }
-}
-
-impl<D> Decode<D> for i32
-    where D: DecodeI32 + 'static,
-{
-    fn from_wire(data: Arc<[u8]>) -> Self {
-        <D as DecodeI32>::decode_i32()
-    }
-}
-impl<D> Decode<D> for i64
-    where D:DecodeI64 + 'static,
-{
-    fn from_wire(data: Arc<[u8]>) -> Self {
-        <D as DecodeI64>::decode_i64()
-    }
-}
-impl<D> Decode<D> for i128
-    where D:DecodeI128 + 'static {
-        fn from_wire(data: Arc<[u8]>) -> Self {
-            <D as DecodeI128>::decode_i128()
-        }
-}
-impl<D> Decode<D> for u8 where D: DecodeU8 {
-    fn from_wire(data: Arc<[u8]>) -> Self {
-        <D as DecodeU8>::Decode_u8()
-    }
-}
-impl<D> Decode<D> for u16 where D: DecodeU16 {
-    fn from_wire(data: Arc<[u8]>) -> Self {
-        <D as DecodeU16>::decode_u16()
-    }
-}
-impl<D> Decode<D> for u32 where D: DecodeU32 {
-    fn from_wire(data: Arc<[u8]>) -> Self {
-        <D as DecodeU32>::decode_u32()
-    }
-}
-impl<D> Deocde<D> for u64 where D: DecodeU64 {
-    fn from_wire(data: Arc<[u8]>) -> Self {
-        <D as DecodeU64>::decode_u64()
-    }
-}
-impl<D> Decode<D> for u128 where D: DecodeU128 {
-    fn from_wire(data: Arc<[u8]>) -> Self {
-        <D as DecodeU128>::decode_u128()
-    }
-}
-impl<D> Decode<D> for String where D: DecodeUtf8 {
-    fn from_wire(data: Arc<[u8]>) -> Self {
-        <D as DecodeUtf8>::decode_utf8()
-    }
+    // decode logic
+    fn decode_column<RustType>(&self,data: Arc<[u8]>,index:usize) -> std::io::Result<RustType>;
+    fn decode_column_named<RustType>(&self,data: Arc<[u8]>,index:usize) -> std::io::Result<RustType>;
+    // prepare_logic
+    fn prepare_sql(&mut self,sql: &str) -> std::io::Result<()>;
 }
 
+
+#[cfg(test)]
+fn test() {}
