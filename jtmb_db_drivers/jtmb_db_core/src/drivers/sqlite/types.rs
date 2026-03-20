@@ -1,11 +1,11 @@
 use libsqlite3_sys::{
-    sqlite3_bind_double, sqlite3_bind_int64, sqlite3_bind_text, sqlite3_column_double, sqlite3_column_int64, sqlite3_destructor_type, sqlite3_finalize, sqlite3_prepare_v2, sqlite3_reset, sqlite3_step, sqlite3_stmt
+    sqlite3_bind_double, sqlite3_bind_int64, sqlite3_bind_text, sqlite3_blob, sqlite3_column_blob, sqlite3_column_bytes, sqlite3_column_double, sqlite3_column_int64, sqlite3_column_text, sqlite3_destructor_type, sqlite3_finalize, sqlite3_prepare_v2, sqlite3_reset, sqlite3_step, sqlite3_stmt
 };
 use std::ops::Deref;
-type Real = f64;
-type Float = f64;
-type Integer = i64;
-type Text = String;
+pub type Real = f64;
+pub type Float = f64;
+pub type Integer = i64;
+pub type Text = String;
 struct Blob(Vec<u8>);
 impl Deref for Blob {
     type Target = Vec<u8>;
@@ -13,6 +13,11 @@ impl Deref for Blob {
         &self.0
     }
 }
+
+
+
+// a table that allows you to tlb[col_type](extract) without matching 
+
 
 pub trait BindTo {
     fn bind_to(self, col: i32, stmt: *mut sqlite3_stmt) -> i32;
@@ -113,6 +118,9 @@ impl Statement {
         let _rc = unsafe {
             sqlite3_reset(self.ptr)
         };
+    }
+    pub (crate) fn bind_vtbl(&self) -> _ {
+        let t = [self.bind::<Integer>,self.bind::<Float>,self.bind::<String>]
     }
     pub (crate) fn finalize(self) {}
     pub(crate) fn text(&mut self, col: i32) -> String {

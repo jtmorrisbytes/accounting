@@ -3,6 +3,7 @@ use std::{
 };
 pub mod utils;
 pub mod types;
+pub mod vtbl;
 unsafe extern "C" {
     /// Manually linking the v2 close function
     pub fn sqlite3_close_v2(db: *mut sqlite3) -> std::ffi::c_int;
@@ -169,7 +170,7 @@ impl Drop for Worker {
 }
 #[derive(Debug)]
 pub enum WorkerResponse {
-    PrepareFailed(i32),
+    PrepareFailed(String),
     Schema(Vec<(String, i32)>),
     Row(Vec<u8>),
     Done,
@@ -233,32 +234,14 @@ impl Worker {
                 };
                 match m {
                     WorkerTask::Execute(sql, sender) => {
-                        // status.store(1, std::sync::atomic::Ordering::Relaxed);
-                        println!("worker asked to execute sql {sql}");
-                        // convert S to a C string
-                        let csql = std::ffi::CString::new(sql)
-                            .expect("Somebody poisoned the water hole ! null byte detected");
-                        let len = csql.as_bytes_with_nul().len();
-                        let bytes = csql.as_c_str().as_ptr();
-                        unsafe {
-                            let mut stmt_ptr = std::ptr::null_mut();
-                            // prepare the sql
-                            let r = sqlite3_prepare_v2(
-                                *conn,
-                                bytes,
-                                len as i32,
-                                &mut stmt_ptr,
-                                std::ptr::null_mut(),
-                            );
-                            if r != SQLITE_OK {
-                                // TODO return result to oneshot
-                                eprintln!("Failed to prepare statement {r}");
-                                sender.send(WorkerResponse::PrepareFailed(r)).ok();
-                                continue;
-                            }
-
+                        let stmt = self::types::Statement::prepare(&conn, &sql);
+                        let stmt = match stmt {
+                            Err(e) => {sender.send(WorkerResponse::PrepareFailed(e));continue;},
+                            Ok(s)=>{s}
+                        }
+                            stmt.step().unwrap();
                             let num_columms = sqlite3_column_count(stmt_ptr);
-                            let mut rc = sqlite3_step(stmt_ptr);
+                            // let mut rc = sqlite3_step(stmt_ptr);
 
                             let mut metadata = Vec::new();
                             for i in 0..num_columms {
@@ -281,12 +264,10 @@ impl Worker {
                             while rc != SQLITE_DONE {
                                 match rc {
                                     SQLITE_ROW => {
-                                        println!("Sqlite returned a row");
-                                        // sender.send(WorkerResponse::Row { column_count: num_columms }).ok();
-                                        println!("extracting columns");
+
                                         // let mut col_type: i32 = 0;
                                         for i in 0..num_columms {
-                                            println!("C");
+                                            // println!("C");
                                             let col_type = metadata[i as usize].1;
                                             // let col_type = sqlite3_column_type(stmt_ptr, i);
                                         
@@ -296,7 +277,7 @@ impl Worker {
                                             );
                                             match col_type {
                                                 SQLITE_INTEGER => {
-                                                    let data = sqlite3_column_int64(stmt_ptr, i);
+                                                    let data = stmt.extract::<self::types::Integer>(i);
                                                     // let bytes = data.to_ne_bytes().to_vec();
                                                     // sender.send(WorkerResponse::Column { name.clone(), index: i, r#type: col_type, data: bytes }).ok();
                                                     row_data.extend_from_slice(
@@ -313,28 +294,19 @@ impl Worker {
                                                     row_data.extend_from_slice(std::mem::size_of_val(&float).to_ne_bytes().as_slice());
                                                     row_data.extend_from_slice(float.to_ne_bytes().as_slice());
                                                 }
-
-
-                                                SQLITE_TEXT | SQLITE_BLOB => {
-                                                    let ptr = sqlite3_column_text(stmt_ptr, i);
-                                                    let size = sqlite3_column_bytes(stmt_ptr, i);
+                                                SQLITE_BLOB => {
+                                                    todo!()
+                                                } 
+                                                SQLITE_TEXT => {
+                                                    let s = stmt.text(i);
+                                                    // let ptr = sqlite3_column_text(stmt_ptr, i);
+                                                    // let size = sqlite3_column_bytes(stmt_ptr, i);
                                                     // row_data.extend_from_slice(col_type.to_ne_bytes().as_slice());
-                                                    if ptr.is_null() {
-                                                        row_data.extend_from_slice(
-                                                            0_u32.to_ne_bytes().as_slice(),
-                                                        );
-                                                        continue;
-                                                    }
-                                                    let slice = unsafe {
-                                                        std::slice::from_raw_parts(
-                                                            ptr,
-                                                            size as usize,
-                                                        )
-                                                    };
+                                                    
                                                     row_data.extend_from_slice(
-                                                        (size as u32).to_ne_bytes().as_slice(),
+                                                        (s.len() as u32).to_ne_bytes().as_slice(),
                                                     );
-                                                    row_data.extend_from_slice(slice);
+                                                    row_data.extend_from_slice(s.as_bytes());
                                                 }
                                                 SQLITE_NULL => {
                                                     // row_data.extend_from_slice(co);
