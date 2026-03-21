@@ -4,14 +4,19 @@ use std::{
 pub mod utils;
 pub mod types;
 pub mod vtbl;
+pub mod worker;
+
+
 unsafe extern "C" {
     /// Manually linking the v2 close function
     pub fn sqlite3_close_v2(db: *mut sqlite3) -> std::ffi::c_int;
 }
 
-use crossbeam::queue::ArrayQueue;
+use crossbeam::{deque::Worker, queue::ArrayQueue};
 use dashmap::DashMap;
 use libsqlite3_sys::*;
+
+use crate::drivers::sqlite::worker::{WorkerResponse, WorkerTask};
 type WorkerId = u32;
 pub struct Driver {
     options: DriverOptions,
@@ -137,223 +142,6 @@ pub struct DriverOptions {
 #[derive(Clone, Debug)]
 pub struct ConnectOptions {
     url: String,
-}
-
-pub enum WorkerTask {
-    Execute(String, std::sync::mpsc::Sender<WorkerResponse>),
-    Shutdown,
-}
-
-/// DROP must be called after the connection exits but before the driver gets dropped
-
-impl Drop for Worker {
-    fn drop(&mut self) {
-        // attempt to send the message to the thread
-        let handle = self
-            .thread_handle
-            .take()
-            .expect("BUG BUG! Worker thread should be initialized");
-
-        handle.thread().unpark();
-
-        match self.sender.send(WorkerTask::Shutdown) {
-            Err(e) => {
-                println!(
-                    "WARNING: failed to send shutdown signal to worker thread: {e}. connection may dangle."
-                );
-            }
-            _ => {}
-        }
-        let r = handle.join();
-        println!("thread joined with result {r:?}");
-    }
-}
-#[derive(Debug)]
-pub enum WorkerResponse {
-    PrepareFailed(String),
-    Schema(Vec<(String, i32)>),
-    Row(Vec<u8>),
-    Done,
-}
-
-#[derive(Debug)]
-pub struct Worker {
-    // connection: *mut sqlite3,
-    connection_options: ConnectOptions,
-    status: Arc<AtomicU32>,
-    sender: std::sync::mpsc::Sender<WorkerTask>,
-    thread_handle: Option<std::thread::JoinHandle<Result<(), std::io::Error>>>,
-}
-impl Worker {
-    fn spawn(options: &ConnectOptions) -> std::io::Result<Self> {
-        let url = std::ffi::CString::new(options.url.as_str())?;
-        let (task_sender, task_reviever) = std::sync::mpsc::channel();
-        let mut conn_ptr: *mut sqlite3 = std::ptr::null_mut();
-        let result = unsafe {
-            sqlite3_open_v2(
-                url.as_ptr(),
-                &mut conn_ptr,
-                SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                core::ptr::null(),
-            )
-        };
-        if result != SQLITE_OK {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::ConnectionRefused,
-                format!(
-                    "Failed to connect to sqlite DB. sqlite returned error code {result} in call to sqlite3_v2_open"
-                ),
-            ));
-        }
-        let conn = conn_ptr;
-        let conn = ConnectionHandle(conn);
-        let status = Arc::new(AtomicU32::new(u32::MAX));
-
-        let status1 = status.clone();
-        let thread_handle: JoinHandle<std::io::Result<()>> = std::thread::spawn(move || {
-            let conn = conn;
-            let status = status1;
-            println!("Worker thread spawned");
-            loop {
-                let m = match task_reviever.recv() {
-                    Err(e) => {
-                        // sender disconnected. thread may be dropped
-                        println!("Warning: Worker thread detected that task sender disconnected");
-                        // todo!();
-                        break;
-                        // Driver::try_disconnect_on_worker_sender_dropped(conn_ptr);
-                    }
-                    // if the queue is empty, the thread will park
-                    Ok(m) => m,
-                    // Err(TryRecvError::Empty) => {
-                    //     println!("Task queue empty");
-                    //     status.store(0_u32, std::sync::atomic::Ordering::Relaxed);
-                    //     std::thread::park();
-                    //     continue;
-                    // }
-                };
-                match m {
-                    WorkerTask::Execute(sql, sender) => {
-                        let stmt = self::types::Statement::prepare(&conn, &sql);
-                        let stmt = match stmt {
-                            Err(e) => {sender.send(WorkerResponse::PrepareFailed(e));continue;},
-                            Ok(s)=>{s}
-                        }
-                            stmt.step().unwrap();
-                            let num_columms = sqlite3_column_count(stmt_ptr);
-                            // let mut rc = sqlite3_step(stmt_ptr);
-
-                            let mut metadata = Vec::new();
-                            for i in 0..num_columms {
-                                let col_type = unsafe { sqlite3_column_type(stmt_ptr, i) };
-                                dbg!(col_type);
-                                let n = unsafe {
-                                    let name_ptr =
-                                        unsafe { sqlite3_column_name(stmt_ptr, i as i32) };
-                                    if name_ptr.is_null() {
-                                        metadata.push((String::new(),col_type));
-                                    }
-                                    std::ffi::CStr::from_ptr(name_ptr)
-                                        .to_string_lossy()
-                                        .to_string()
-                                };
-                                metadata.push((n, col_type))
-                            }
-                            sender.send(WorkerResponse::Schema(metadata.clone())).ok();
-                            let mut row_data = Vec::<u8>::with_capacity(256);
-                            while rc != SQLITE_DONE {
-                                match rc {
-                                    SQLITE_ROW => {
-
-                                        // let mut col_type: i32 = 0;
-                                        for i in 0..num_columms {
-                                            // println!("C");
-                                            let col_type = metadata[i as usize].1;
-                                            // let col_type = sqlite3_column_type(stmt_ptr, i);
-                                        
-                                            let name = &metadata[i as usize].0;
-                                            row_data.extend_from_slice(
-                                                col_type.to_ne_bytes().as_slice(),
-                                            );
-                                            match col_type {
-                                                SQLITE_INTEGER => {
-                                                    let data = stmt.extract::<self::types::Integer>(i);
-                                                    // let bytes = data.to_ne_bytes().to_vec();
-                                                    // sender.send(WorkerResponse::Column { name.clone(), index: i, r#type: col_type, data: bytes }).ok();
-                                                    row_data.extend_from_slice(
-                                                            std::mem::size_of_val(&data)
-                                                            .to_ne_bytes()
-                                                            .as_slice(),
-                                                    );
-                                                    row_data.extend_from_slice(
-                                                        data.to_ne_bytes().as_slice(),
-                                                    );
-                                                }
-                                                SQLITE_FLOAT => {
-                                                    let float = sqlite3_column_double(stmt_ptr, i);
-                                                    row_data.extend_from_slice(std::mem::size_of_val(&float).to_ne_bytes().as_slice());
-                                                    row_data.extend_from_slice(float.to_ne_bytes().as_slice());
-                                                }
-                                                SQLITE_BLOB => {
-                                                    todo!()
-                                                } 
-                                                SQLITE_TEXT => {
-                                                    let s = stmt.text(i);
-                                                    // let ptr = sqlite3_column_text(stmt_ptr, i);
-                                                    // let size = sqlite3_column_bytes(stmt_ptr, i);
-                                                    // row_data.extend_from_slice(col_type.to_ne_bytes().as_slice());
-                                                    
-                                                    row_data.extend_from_slice(
-                                                        (s.len() as u32).to_ne_bytes().as_slice(),
-                                                    );
-                                                    row_data.extend_from_slice(s.as_bytes());
-                                                }
-                                                SQLITE_NULL => {
-                                                    // row_data.extend_from_slice(co);
-                                                    row_data.extend_from_slice(
-                                                        0_u32.to_ne_bytes().as_slice(),
-                                                    );
-                                                }
-                                                _ => todo!("Col type {col_type}"),
-                                            }
-                                        }
-                                        sender.send(WorkerResponse::Row(row_data.clone())).ok();
-                                        row_data.clear();
-                                    }
-                                    _ => todo!("sqlite3_step"),
-                                }
-                                rc = unsafe {sqlite3_step(stmt_ptr)};
-                            
-                                println!("sqlite3_step {rc}");
-                            }
-                            if rc != SQLITE_DONE {
-                                println!("Sqlite3 step returned a non DONE response {rc}");
-                            }
-                            let r = sqlite3_finalize(stmt_ptr);
-                            // println!("sqlite3_finalize {r}");
-                            sender.send(WorkerResponse::Done).ok();
-                        }
-
-                        // std::thread::sleep(std::time::Duration::from_secs(1));
-                        // status.store(0, std::sync::atomic::Ordering::Relaxed);
-                        // std::thread::park();
-                    }
-                    WorkerTask::Shutdown => {
-                        println!("Shutdown requested");
-                        break;
-                    }
-                }
-            }
-            std::io::Result::Ok(())
-        });
-        let s = Self {
-            connection_options: options.to_owned(),
-            sender: task_sender,
-            thread_handle: Some(thread_handle),
-            status: status,
-        };
-        Ok(s)
-    }
 }
 
 impl crate::DriverInitialize for self::Driver {
@@ -578,7 +366,8 @@ pub fn test_reactor() -> std::io::Result<()> {
                         
                         let len = u32::from_ne_bytes(integer_bytes);
                         dbg!(len);
-                        let mut data_bytes = vec![0_u8; len];
+                        let len2 = len as usize;
+                        let mut data_bytes = Vec::<u8>::with_capacity(10);
                         cursor.read_exact(&mut data_bytes).unwrap();
                         
                         match type_id {
@@ -587,7 +376,7 @@ pub fn test_reactor() -> std::io::Result<()> {
                                 dbg!(i);
                             }
                             SQLITE_FLOAT => {
-                                let f = f64::from_ne_bytes(data_bytes[0..len].try_into().unwrap());
+                                let f = f64::from_ne_bytes(data_bytes[0_usize..len as usize].try_into().unwrap());
                                 dbg!(f);
                             }
                             SQLITE3_TEXT => {

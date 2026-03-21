@@ -3,7 +3,7 @@
 type ExtractFn = unsafe fn(*mut ffi::sqlite3_stmt, i32, &mut Vec<u8>);
 
 // 2. The "VTable" (Index 0 is unused)
-static EXTRACT_TBL: [ExtractFn; 6] = [
+pub(crate) static EXTRACT_TBL: [ExtractFn; 6] = [
     nop_extract,   // 0: Guard
     pack_int,      // 1: SQLITE_INTEGER
     pack_float,    // 2: SQLITE_FLOAT

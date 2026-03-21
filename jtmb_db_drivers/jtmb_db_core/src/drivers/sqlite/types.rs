@@ -1,5 +1,5 @@
 use libsqlite3_sys::{
-    sqlite3_bind_double, sqlite3_bind_int64, sqlite3_bind_text, sqlite3_blob, sqlite3_column_blob, sqlite3_column_bytes, sqlite3_column_double, sqlite3_column_int64, sqlite3_column_text, sqlite3_destructor_type, sqlite3_finalize, sqlite3_prepare_v2, sqlite3_reset, sqlite3_step, sqlite3_stmt
+    sqlite3_bind_double, sqlite3_bind_int64, sqlite3_bind_text, sqlite3_blob, sqlite3_column_blob, sqlite3_column_bytes, sqlite3_column_count, sqlite3_column_double, sqlite3_column_int64, sqlite3_column_text, sqlite3_destructor_type, sqlite3_finalize, sqlite3_prepare_v2, sqlite3_reset, sqlite3_step, sqlite3_stmt
 };
 use std::ops::Deref;
 pub type Real = f64;
@@ -154,6 +154,11 @@ impl Statement {
     {
         let t = T::extract_from(self.ptr, col);
         t
+    }
+    pub(crate) fn column_count(&self) -> i32 {
+        unsafe {
+            sqlite3_column_count(self.0)
+        }
     }
 }
 // not sure if needed but DONT USE WITH MORE THAN 1 THREAD AT SAME TIME. DO NOT CLONE
