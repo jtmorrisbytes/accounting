@@ -119,9 +119,19 @@ impl Statement {
             sqlite3_reset(self.ptr)
         };
     }
-    pub (crate) fn bind_vtbl(&self) -> _ {
-        let t = [self.bind::<Integer>,self.bind::<Float>,self.bind::<String>]
+    pub (crate) fn column_count(&self) -> i32 {
+        unsafe {
+            sqlite3_column_count(self.ptr)
+        }
     }
+    pub(crate) fn column_type(&self) -> i32 {
+        unsafe {
+            sqlite3_column_count(self.ptr)
+        }
+    }
+    // pub (crate) fn bind_vtbl(&self) -> _ {
+    //     // let t = [self.bind::<Integer>,self.bind::<Float>,self.bind::<String>];
+    // }
     pub (crate) fn finalize(self) {}
     pub(crate) fn text(&mut self, col: i32) -> String {
         unsafe { super::utils::stmt_text_to_string_lossy_empty_if_null(self.ptr, col) }
@@ -155,11 +165,11 @@ impl Statement {
         let t = T::extract_from(self.ptr, col);
         t
     }
-    pub(crate) fn column_count(&self) -> i32 {
-        unsafe {
-            sqlite3_column_count(self.0)
-        }
-    }
+    // pub(crate) fn column_count(&self) -> i32 {
+    //     unsafe {
+    //         sqlite3_column_count(self.0)
+    //     }
+    // }
 }
 // not sure if needed but DONT USE WITH MORE THAN 1 THREAD AT SAME TIME. DO NOT CLONE
 unsafe impl Send for Statement {}

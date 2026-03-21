@@ -12,7 +12,7 @@ unsafe extern "C" {
     pub fn sqlite3_close_v2(db: *mut sqlite3) -> std::ffi::c_int;
 }
 
-use crossbeam::{deque::Worker, queue::ArrayQueue};
+use crossbeam::{queue::ArrayQueue};
 use dashmap::DashMap;
 use libsqlite3_sys::*;
 
@@ -20,7 +20,7 @@ use crate::drivers::sqlite::worker::{WorkerResponse, WorkerTask};
 type WorkerId = u32;
 pub struct Driver {
     options: DriverOptions,
-    workers: ArrayQueue<Worker>,
+    workers: ArrayQueue<self::worker::Worker>,
     connect_options: ConnectOptions,
 }
 #[unsafe(no_mangle)]
@@ -169,7 +169,7 @@ impl crate::DriverInitialize for self::Driver {
         let mut worker_id = 0_u32;
         let mut workers = ArrayQueue::new(driver_options.num_worker_threads as usize);
         for _ in 0..driver_options.num_worker_threads {
-            let worker = Worker::spawn(&connect_options)?;
+            let worker = self::worker::Worker::spawn(&connect_options)?;
             unsafe { worker_id = worker_id.unchecked_add(1) };
             workers.push(worker).unwrap();
         }
@@ -279,9 +279,9 @@ impl Driver {
 
         // 3. Dispatch the task
         // We unpark before sending to minimize the gap between "task in queue" and "worker awake"
-        worker.thread_handle.as_ref().unwrap().thread().unpark();
+        // worker.thread_handle.as_ref().unwrap().thread().unpark();
 
-        if let Err(_) = worker.sender.send(WorkerTask::Execute(q.to_string(), tx)) {
+        if let Err(_) = worker.send(WorkerTask::Execute(q.to_string(), tx)) {
             // If the worker thread died, we still need to push it back or handle the loss
             self.workers.push(worker).ok();
             return Err(std::io::Error::new(

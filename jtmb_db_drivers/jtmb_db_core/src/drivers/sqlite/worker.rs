@@ -49,7 +49,8 @@ impl Drop for Worker {
 
 pub(crate) unsafe fn worker_execute(stmt: &mut super::types::Statement,sender:std::sync::mpsc::Sender<WorkerResponse>,row_data: &mut Vec<u8>) -> std::io::Result<()> {
     let mut rc = stmt.step().unwrap();
-    let num_columns = sqlite3_column_count(**stmt);
+    // let num_columns = sqlite3_column_count(**stmt);
+    let num_columns = stmt.column_count();
     // let mut rc = sqlite3_step(stmt);
 
     let mut metadata = Vec::new();
@@ -73,7 +74,7 @@ pub(crate) unsafe fn worker_execute(stmt: &mut super::types::Statement,sender:st
         for c in 0..num_columns {
             // fast vtble insead of column match
             unsafe {
-                super::vtbl::EXTRACT_TBL[c](**stmt, c as i32, &mut row_data)
+                super::vtbl::EXTRACT_TBL[c as usize](**stmt, c as i32, &mut row_data)
             }
         }
         rc = stmt.step().unwrap();
@@ -100,7 +101,12 @@ pub struct Worker {
     thread_handle: Option<std::thread::JoinHandle<Result<(), std::io::Error>>>,
 }
 impl Worker {
-    fn spawn(options: &ConnectOptions) -> std::io::Result<Self> {
+    pub(crate) fn send(&self,task: WorkerTask) -> Result<(), std::sync::mpsc::SendError<WorkerTask>> {
+        self.sender.send(task)
+    }
+
+
+    pub(crate) fn spawn(options: &ConnectOptions) -> std::io::Result<Self> {
         let url = std::ffi::CString::new(options.url.as_str())?;
         let (task_sender, task_reviever) = std::sync::mpsc::channel();
         let mut conn_ptr: *mut sqlite3 = std::ptr::null_mut();
